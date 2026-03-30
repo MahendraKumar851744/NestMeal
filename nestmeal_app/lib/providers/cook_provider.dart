@@ -10,6 +10,11 @@ class CookProvider extends ChangeNotifier {
   bool isLoading = false;
   String? error;
 
+  // Follow state
+  List<CookCard> followingCooks = [];
+  Set<String> followedCookIds = {};
+  bool isFollowingLoading = false;
+
   final ApiService _apiService;
 
   CookProvider(this._apiService);
@@ -75,6 +80,57 @@ class CookProvider extends ChangeNotifier {
       rethrow;
     } finally {
       isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // ── Follow methods ──────────────────────────────────────────────────
+
+  bool isFollowing(String cookId) => followedCookIds.contains(cookId);
+
+  Future<bool> toggleFollow(String cookId) async {
+    try {
+      final response = await _apiService.post(
+        '${ApiConfig.cooksPublicUrl}/$cookId/follow/',
+        {},
+      );
+      final isFollowed = response['is_followed'] as bool;
+
+      if (isFollowed) {
+        followedCookIds.add(cookId);
+      } else {
+        followedCookIds.remove(cookId);
+      }
+
+      // Update selectedCook if it matches
+      if (selectedCook != null && selectedCook!.id == cookId) {
+        await fetchCookDetail(cookId);
+      }
+
+      notifyListeners();
+      return isFollowed;
+    } catch (e) {
+      error = e.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> fetchFollowing() async {
+    isFollowingLoading = true;
+    _safeNotify();
+
+    try {
+      final response = await _apiService.get('${ApiConfig.followingUrl}/');
+      final results =
+          response is List ? response : response['results'] as List;
+      followingCooks =
+          results.map((json) => CookCard.fromJson(json)).toList();
+      followedCookIds = followingCooks.map((c) => c.id).toSet();
+    } catch (e) {
+      error = e.toString();
+    } finally {
+      isFollowingLoading = false;
       notifyListeners();
     }
   }

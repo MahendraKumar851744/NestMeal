@@ -1,14 +1,15 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 
 import 'package:nestmeal_app/config/theme.dart';
 import 'package:nestmeal_app/providers/auth_provider.dart';
+import 'package:nestmeal_app/services/api_service.dart';
 import 'package:nestmeal_app/screens/auth/login_screen.dart';
-import 'package:nestmeal_app/screens/customer/customer_shell.dart';
-import 'package:nestmeal_app/screens/cook/cook_shell.dart';
-import 'package:nestmeal_app/screens/admin/admin_dashboard_screen.dart';
+import 'package:nestmeal_app/screens/auth/otp_verification_screen.dart';
 import 'package:nestmeal_app/screens/common/location_picker_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -39,6 +40,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _selectedRole = 'customer';
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _acceptedTerms = false;
+  bool _acceptedPrivacy = false;
 
   @override
   void dispose() {
@@ -57,6 +60,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (!_acceptedTerms || !_acceptedPrivacy) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please accept the Terms & Conditions and Privacy Policy'),
+          backgroundColor: AppTheme.errorRed,
+        ),
+      );
+      return;
+    }
 
     final authProvider = context.read<AuthProvider>();
 
@@ -86,12 +99,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (!mounted) return;
 
-      _navigateByRole(authProvider);
+      // Navigate to OTP verification instead of directly to the app
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => OTPVerificationScreen(
+            phone: _phoneController.text.trim(),
+          ),
+        ),
+        (route) => false,
+      );
     } catch (e) {
       if (!mounted) return;
+      final message = e is ApiException ? e.message : e.toString();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString()),
+          content: Text(message),
           backgroundColor: AppTheme.errorRed,
         ),
       );
@@ -124,23 +146,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _zipController.text = result.zipCode;
       });
     }
-  }
-
-  void _navigateByRole(AuthProvider authProvider) {
-    Widget destination;
-
-    if (authProvider.isCook) {
-      destination = const CookShell();
-    } else if (authProvider.isAdmin) {
-      destination = const AdminDashboardScreen();
-    } else {
-      destination = const CustomerShell();
-    }
-
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => destination),
-      (route) => false,
-    );
   }
 
   @override
@@ -457,8 +462,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         child: TextFormField(
                           controller: _cityController,
                           decoration: const InputDecoration(
-                            labelText: 'City',
-                            hintText: 'City',
+                            labelText: 'Suburb',
+                            hintText: 'Suburb',
                           ),
                           validator: (value) {
                             if (_selectedRole == 'cook' &&
@@ -474,8 +479,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         child: TextFormField(
                           controller: _stateController,
                           decoration: const InputDecoration(
-                            labelText: 'State',
-                            hintText: 'State',
+                            labelText: 'City',
+                            hintText: 'City',
                           ),
                           validator: (value) {
                             if (_selectedRole == 'cook' &&
@@ -492,8 +497,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           controller: _zipController,
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
-                            labelText: 'Zip',
-                            hintText: 'Zip',
+                            labelText: 'Postcode',
+                            hintText: 'Postcode',
                           ),
                           validator: (value) {
                             if (_selectedRole == 'cook' &&
@@ -509,7 +514,101 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const SizedBox(height: 16),
                 ],
 
+                // Terms & Conditions checkbox
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: Checkbox(
+                        value: _acceptedTerms,
+                        onChanged: (value) {
+                          setState(() => _acceptedTerms = value ?? false);
+                        },
+                        activeColor: AppTheme.primaryOrange,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: RichText(
+                        text: TextSpan(
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppTheme.greyText,
+                          ),
+                          children: [
+                            const TextSpan(text: 'I accept the '),
+                            TextSpan(
+                              text: 'Terms & Conditions',
+                              style: TextStyle(
+                                color: AppTheme.primaryOrange,
+                                fontWeight: FontWeight.w600,
+                                decoration: TextDecoration.underline,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () {
+                                  launchUrl(
+                                    Uri.parse('https://example.com/terms-and-conditions'),
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 8),
+
+                // Privacy Policy checkbox
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: Checkbox(
+                        value: _acceptedPrivacy,
+                        onChanged: (value) {
+                          setState(() => _acceptedPrivacy = value ?? false);
+                        },
+                        activeColor: AppTheme.primaryOrange,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: RichText(
+                        text: TextSpan(
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppTheme.greyText,
+                          ),
+                          children: [
+                            const TextSpan(text: 'I have read the '),
+                            TextSpan(
+                              text: 'Privacy Policy',
+                              style: TextStyle(
+                                color: AppTheme.primaryOrange,
+                                fontWeight: FontWeight.w600,
+                                decoration: TextDecoration.underline,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () {
+                                  launchUrl(
+                                    Uri.parse('https://example.com/privacy-policy'),
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
 
                 // Register Button
                 SizedBox(

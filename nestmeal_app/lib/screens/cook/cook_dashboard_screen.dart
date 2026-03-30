@@ -7,7 +7,9 @@ import 'package:nestmeal_app/config/theme.dart';
 import 'package:nestmeal_app/providers/auth_provider.dart';
 import 'package:nestmeal_app/providers/meal_provider.dart';
 import 'package:nestmeal_app/providers/order_provider.dart';
+import 'package:nestmeal_app/models/helpers.dart';
 import 'package:nestmeal_app/screens/cook/edit_meal_screen.dart';
+import 'package:nestmeal_app/screens/cook/slot_management_screen.dart';
 
 class CookDashboardScreen extends StatefulWidget {
   const CookDashboardScreen({super.key});
@@ -212,20 +214,26 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: _StatCard(
-            icon: Icons.pending_actions,
-            iconColor: Colors.amber.shade700,
-            label: 'Pending',
-            value: '$pendingOrders',
+          child: GestureDetector(
+            onTap: () => _switchToTab(2),
+            child: _StatCard(
+              icon: Icons.pending_actions,
+              iconColor: Colors.amber.shade700,
+              label: 'Pending',
+              value: '$pendingOrders',
+            ),
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: _StatCard(
-            icon: Icons.assignment_outlined,
-            iconColor: AppTheme.primaryOrange,
-            label: 'Active',
-            value: '$activeOrders',
+          child: GestureDetector(
+            onTap: () => _switchToTab(2),
+            child: _StatCard(
+              icon: Icons.assignment_outlined,
+              iconColor: AppTheme.primaryOrange,
+              label: 'Active',
+              value: '$activeOrders',
+            ),
           ),
         ),
         const SizedBox(width: 10),
@@ -242,9 +250,12 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
   }
 
   Widget _buildQuickActions() {
-    return Row(
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
       children: [
-        Expanded(
+        SizedBox(
+          width: (MediaQuery.of(context).size.width - 44) / 2,
           child: _QuickActionButton(
             icon: Icons.add_circle_outline,
             label: 'Add Meal',
@@ -252,8 +263,8 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
             onTap: () => _switchToTab(1),
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
+        SizedBox(
+          width: (MediaQuery.of(context).size.width - 44) / 2,
           child: _QuickActionButton(
             icon: Icons.receipt_long_outlined,
             label: 'View Orders',
@@ -261,8 +272,23 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
             onTap: () => _switchToTab(2),
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
+        SizedBox(
+          width: (MediaQuery.of(context).size.width - 44) / 2,
+          child: _QuickActionButton(
+            icon: Icons.event_available_outlined,
+            label: 'Manage Slots',
+            color: Colors.teal.shade600,
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const SlotManagementScreen(),
+                ),
+              );
+            },
+          ),
+        ),
+        SizedBox(
+          width: (MediaQuery.of(context).size.width - 44) / 2,
           child: _QuickActionButton(
             icon: Icons.person_outline,
             label: 'My Profile',
@@ -441,25 +467,22 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: meal.isAvailable
-                                  ? AppTheme.successGreen.withValues(alpha: 0.1)
-                                  : AppTheme.errorRed.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              meal.isAvailable ? 'Active' : 'Hidden',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: meal.isAvailable
-                                    ? AppTheme.successGreen
-                                    : AppTheme.errorRed,
+                          if (meal.isAvailable)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppTheme.successGreen.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'Active',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.successGreen,
+                                ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 4),
@@ -498,13 +521,36 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
                 const SizedBox(width: 8),
 
                 // Price
-                Text(
-                  'A\$${meal.effectivePrice.toStringAsFixed(0)}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.primaryOrange,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (meal.discountPercentage > 0) ...[
+                      Text(
+                        '${currencySymbol(meal.currency)}${meal.price.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.greyText,
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                      ),
+                      Text(
+                        '${meal.discountPercentage.toStringAsFixed(0)}% off',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.successGreen,
+                        ),
+                      ),
+                    ],
+                    Text(
+                      '${currencySymbol(meal.currency)}${meal.effectivePrice.toStringAsFixed(0)}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.primaryOrange,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

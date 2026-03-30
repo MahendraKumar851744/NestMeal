@@ -5,6 +5,7 @@ import 'package:nestmeal_app/screens/cook/cook_dashboard_screen.dart';
 import 'package:nestmeal_app/screens/cook/add_meal_screen.dart';
 import 'package:nestmeal_app/screens/cook/cook_orders_screen.dart';
 import 'package:nestmeal_app/screens/cook/cook_profile_edit_screen.dart';
+import 'package:nestmeal_app/screens/cook/story_upload_screen.dart';
 
 class CookShell extends StatefulWidget {
   const CookShell({super.key});
@@ -37,6 +38,16 @@ class _CookShellState extends State<CookShell> {
         body: IndexedStack(
           index: _currentIndex,
           children: _screens,
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const StoryUploadScreen()),
+            );
+          },
+          backgroundColor: AppTheme.primaryOrange,
+          child: const Icon(Icons.camera_alt, color: Colors.white),
         ),
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: _currentIndex,

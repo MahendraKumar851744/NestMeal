@@ -227,6 +227,12 @@ class _CookOrdersScreenState extends State<CookOrdersScreen> {
             ],
           ),
 
+          // Acceptance deadline countdown for placed orders
+          if (status == 'placed' && order.acceptanceDeadline != null) ...[
+            const SizedBox(height: 8),
+            _AcceptanceCountdown(deadline: order.acceptanceDeadline!),
+          ],
+
           // Action buttons for active orders
           if (isActiveOrder) ...[
             const SizedBox(height: 12),
@@ -243,20 +249,22 @@ class _CookOrdersScreenState extends State<CookOrdersScreen> {
       String orderId, String status, String fulfillmentType) {
     switch (status) {
       case 'placed':
-        return Row(
+        return Column(
           children: [
-            Expanded(
+            SizedBox(
+              width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => _updateStatus(orderId, 'accepted'),
+                onPressed: () => _updateStatus(orderId, 'preparing'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.successGreen,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
-                child: const Text('Accept'),
+                child: const Text('Accept & Start Preparing'),
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
               child: OutlinedButton(
                 onPressed: () => _updateStatus(orderId, 'rejected'),
                 style: OutlinedButton.styleFrom(
@@ -284,32 +292,7 @@ class _CookOrdersScreenState extends State<CookOrdersScreen> {
         );
 
       case 'preparing':
-        return SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: () => _updateStatus(orderId, 'ready_for_pickup'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryOrange,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-            child: const Text('Mark Ready'),
-          ),
-        );
-
-      case 'ready_for_pickup':
-        if (fulfillmentType == 'pickup') {
-          return SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => _showPickupVerificationDialog(orderId),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.successGreen,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-              child: const Text('Verify Pickup'),
-            ),
-          );
-        } else {
+        if (fulfillmentType == 'delivery') {
           return SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -321,7 +304,32 @@ class _CookOrdersScreenState extends State<CookOrdersScreen> {
               child: const Text('Out for Delivery'),
             ),
           );
+        } else {
+          return SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => _updateStatus(orderId, 'ready_for_pickup'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryOrange,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: const Text('Mark Ready for Pickup'),
+            ),
+          );
         }
+
+      case 'ready_for_pickup':
+        return SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: () => _showPickupVerificationDialog(orderId),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.successGreen,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            child: const Text('Verify Pickup'),
+          ),
+        );
 
       case 'out_for_delivery':
         return SizedBox(
@@ -365,5 +373,75 @@ class _CookOrdersScreenState extends State<CookOrdersScreen> {
       default:
         return const SizedBox.shrink();
     }
+  }
+}
+
+class _AcceptanceCountdown extends StatefulWidget {
+  final String deadline;
+  const _AcceptanceCountdown({required this.deadline});
+
+  @override
+  State<_AcceptanceCountdown> createState() => _AcceptanceCountdownState();
+}
+
+class _AcceptanceCountdownState extends State<_AcceptanceCountdown> {
+  late DateTime _deadline;
+  late Duration _remaining;
+
+  @override
+  void initState() {
+    super.initState();
+    _deadline = DateTime.parse(widget.deadline).toLocal();
+    _remaining = _deadline.difference(DateTime.now());
+    _tick();
+  }
+
+  void _tick() {
+    if (!mounted) return;
+    Future.delayed(const Duration(seconds: 1), () {
+      if (!mounted) return;
+      setState(() {
+        _remaining = _deadline.difference(DateTime.now());
+      });
+      if (_remaining.inSeconds > 0) _tick();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isExpired = _remaining.inSeconds <= 0;
+    final mins = _remaining.inMinutes;
+    final secs = _remaining.inSeconds % 60;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isExpired
+            ? AppTheme.errorRed.withValues(alpha: 0.1)
+            : AppTheme.primaryOrange.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.timer_outlined,
+            size: 16,
+            color: isExpired ? AppTheme.errorRed : AppTheme.primaryOrange,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            isExpired
+                ? 'Acceptance window expired'
+                : 'Accept within ${mins}m ${secs.toString().padLeft(2, '0')}s',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: isExpired ? AppTheme.errorRed : AppTheme.primaryOrange,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

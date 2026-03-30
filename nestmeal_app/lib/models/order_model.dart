@@ -48,6 +48,8 @@ class OrderListItem {
   final String fulfillmentType;
   final String createdAt;
   final String cookDisplayName;
+  final String? pickupCode;
+  final String? acceptanceDeadline;
 
   OrderListItem({
     required this.id,
@@ -57,6 +59,8 @@ class OrderListItem {
     required this.fulfillmentType,
     required this.createdAt,
     required this.cookDisplayName,
+    this.pickupCode,
+    this.acceptanceDeadline,
   });
 
   factory OrderListItem.fromJson(Map<String, dynamic> json) {
@@ -68,6 +72,8 @@ class OrderListItem {
       fulfillmentType: json['fulfillment_type'] ?? '',
       createdAt: json['created_at'] ?? '',
       cookDisplayName: json['cook_display_name'] ?? '',
+      pickupCode: json['pickup_code'],
+      acceptanceDeadline: json['acceptance_deadline'],
     );
   }
 
@@ -96,9 +102,11 @@ class OrderModel {
   final double subtotal;
   final double deliveryFee;
   final double serviceFee;
+  final double taxAmount;
   final double discountAmount;
   final double totalAmount;
   final String currency;
+  final String? pickupCode;
   final String? couponCode;
   final String? specialInstructions;
   final String? deliveryStreet;
@@ -118,6 +126,7 @@ class OrderModel {
   final String? cancelledAt;
   final String? cancellationReason;
   final String? cancelledBy;
+  final String? acceptanceDeadline;
   final String paymentStatus;
   final String? paymentMethod;
   final List<OrderItem> items;
@@ -136,9 +145,11 @@ class OrderModel {
     required this.subtotal,
     required this.deliveryFee,
     required this.serviceFee,
+    required this.taxAmount,
     required this.discountAmount,
     required this.totalAmount,
     required this.currency,
+    this.pickupCode,
     this.couponCode,
     this.specialInstructions,
     this.deliveryStreet,
@@ -158,6 +169,7 @@ class OrderModel {
     this.cancelledAt,
     this.cancellationReason,
     this.cancelledBy,
+    this.acceptanceDeadline,
     required this.paymentStatus,
     this.paymentMethod,
     required this.items,
@@ -175,23 +187,25 @@ class OrderModel {
       cookDisplayName: json['cook_display_name'] ?? '',
       status: json['status'] ?? '',
       fulfillmentType: json['fulfillment_type'] ?? '',
-      subtotal: toSafeDouble(json['subtotal']),
+      subtotal: toSafeDouble(json['item_total'] ?? json['subtotal']),
       deliveryFee: toSafeDouble(json['delivery_fee']),
-      serviceFee: toSafeDouble(json['service_fee']),
+      serviceFee: toSafeDouble(json['platform_fee'] ?? json['service_fee']),
+      taxAmount: toSafeDouble(json['tax_amount']),
       discountAmount: toSafeDouble(json['discount_amount']),
       totalAmount: toSafeDouble(json['total_amount']),
-      currency: json['currency'] ?? 'USD',
+      currency: json['currency'] ?? 'AUD',
+      pickupCode: json['pickup_code'],
       couponCode: json['coupon_code'],
       specialInstructions: json['special_instructions'],
-      deliveryStreet: json['delivery_street'],
-      deliveryCity: json['delivery_city'],
-      deliveryState: json['delivery_state'],
-      deliveryZip: json['delivery_zip'],
-      deliveryLatitude: json['delivery_latitude'] != null
-          ? toSafeDouble(json['delivery_latitude'])
+      deliveryStreet: json['delivery_address_street'] ?? json['delivery_street'],
+      deliveryCity: json['delivery_address_city'] ?? json['delivery_city'],
+      deliveryState: json['delivery_address_state'] ?? json['delivery_state'],
+      deliveryZip: json['delivery_address_zip'] ?? json['delivery_zip'],
+      deliveryLatitude: (json['delivery_address_lat'] ?? json['delivery_latitude']) != null
+          ? toSafeDouble(json['delivery_address_lat'] ?? json['delivery_latitude'])
           : null,
-      deliveryLongitude: json['delivery_longitude'] != null
-          ? toSafeDouble(json['delivery_longitude'])
+      deliveryLongitude: (json['delivery_address_lng'] ?? json['delivery_longitude']) != null
+          ? toSafeDouble(json['delivery_address_lng'] ?? json['delivery_longitude'])
           : null,
       scheduledDate: json['scheduled_date'],
       scheduledSlot: json['scheduled_slot'],
@@ -204,6 +218,7 @@ class OrderModel {
       cancelledAt: json['cancelled_at'],
       cancellationReason: json['cancellation_reason'],
       cancelledBy: json['cancelled_by'],
+      acceptanceDeadline: json['acceptance_deadline'],
       paymentStatus: json['payment_status'] ?? '',
       paymentMethod: json['payment_method'],
       items: (json['items'] as List?)
@@ -228,9 +243,11 @@ class OrderModel {
       'subtotal': subtotal,
       'delivery_fee': deliveryFee,
       'service_fee': serviceFee,
+      'tax_amount': taxAmount,
       'discount_amount': discountAmount,
       'total_amount': totalAmount,
       'currency': currency,
+      'pickup_code': pickupCode,
       'coupon_code': couponCode,
       'special_instructions': specialInstructions,
       'delivery_street': deliveryStreet,

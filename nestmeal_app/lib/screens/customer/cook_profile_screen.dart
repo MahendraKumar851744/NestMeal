@@ -4,11 +4,15 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../config/theme.dart';
 import '../../models/meal_model.dart';
+import '../../models/helpers.dart';
 import '../../models/review_model.dart';
+import '../../models/story_model.dart';
 import '../../providers/meal_provider.dart';
 import '../../providers/review_provider.dart';
 import '../../providers/cook_provider.dart';
+import '../../providers/story_provider.dart';
 import 'meal_detail_screen.dart';
+import 'story_viewer_screen.dart';
 
 class CookProfileScreen extends StatefulWidget {
   final String cookId;
@@ -22,9 +26,11 @@ class CookProfileScreen extends StatefulWidget {
 class _CookProfileScreenState extends State<CookProfileScreen>
     with SingleTickerProviderStateMixin {
   bool _isLoading = true;
+  bool _isFollowLoading = false;
   CookCard? _cook;
   List<MealModel> _cookMeals = [];
   List<ReviewModel> _reviews = [];
+  List<StoryModel> _stories = [];
   late TabController _tabController;
 
   @override
@@ -46,6 +52,7 @@ class _CookProfileScreenState extends State<CookProfileScreen>
       final cookProvider = context.read<CookProvider>();
       final mealProvider = context.read<MealProvider>();
       final reviewProvider = context.read<ReviewProvider>();
+      final storyProvider = context.read<StoryProvider>();
 
       // Fetch cook profile directly from the public endpoint
       try {
@@ -73,6 +80,19 @@ class _CookProfileScreenState extends State<CookProfileScreen>
         await reviewProvider.fetchReviews(cookId: widget.cookId);
         _reviews = List.from(reviewProvider.reviews);
       } catch (_) {}
+
+      // Fetch stories for this cook
+      try {
+        await storyProvider.fetchCookStories(widget.cookId);
+        _stories = List.from(storyProvider.cookStories);
+      } catch (_) {}
+
+      // Ensure following state is loaded
+      if (cookProvider.followedCookIds.isEmpty) {
+        try {
+          await cookProvider.fetchFollowing();
+        } catch (_) {}
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -85,6 +105,44 @@ class _CookProfileScreenState extends State<CookProfileScreen>
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _toggleFollow() async {
+    setState(() => _isFollowLoading = true);
+    try {
+      final cookProvider = context.read<CookProvider>();
+      await cookProvider.toggleFollow(widget.cookId);
+      _cook = cookProvider.selectedCook;
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update follow: $e'),
+            backgroundColor: AppTheme.errorRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isFollowLoading = false);
+    }
+  }
+
+  void _openStoryViewer() {
+    if (_stories.isEmpty) return;
+    final group = CookStoryGroup(
+      cookId: widget.cookId,
+      cookDisplayName: _cook?.displayName ?? 'Cook',
+      stories: _stories,
+    );
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StoryViewerScreen(
+          storyGroups: [group],
+          initialGroupIndex: 0,
+        ),
+      ),
+    );
   }
 
   @override
@@ -102,6 +160,9 @@ class _CookProfileScreenState extends State<CookProfileScreen>
     final cook = _cook;
     final cookName = cook?.displayName ??
         (_cookMeals.isNotEmpty ? _cookMeals.first.cookDisplayName : 'Cook');
+    final cookProvider = context.watch<CookProvider>();
+    final isFollowed = cookProvider.isFollowing(widget.cookId);
+    final hasStories = _stories.isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppTheme.warmCream,
@@ -132,17 +193,48 @@ class _CookProfileScreenState extends State<CookProfileScreen>
                 children: [
                   const SizedBox(height: 16),
 
-                  // Avatar
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor:
-                        AppTheme.primaryOrange.withValues(alpha: 0.15),
-                    child: Text(
-                      cookName.isNotEmpty ? cookName[0].toUpperCase() : 'C',
-                      style: GoogleFonts.playfairDisplay(
-                        fontSize: 40,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.primaryOrange,
+                  // Avatar with story ring
+                  GestureDetector(
+                    onTap: hasStories ? _openStoryViewer : null,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: hasStories
+                          ? BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppTheme.primaryOrange,
+                                  Colors.deepOrange.shade700,
+                                  Colors.orange.shade400,
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                            )
+                          : null,
+                      child: Container(
+                        padding: hasStories ? const EdgeInsets.all(2) : null,
+                        decoration: hasStories
+                            ? const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppTheme.warmCream,
+                              )
+                            : null,
+                        child: CircleAvatar(
+                          radius: 50,
+                          backgroundColor:
+                              AppTheme.primaryOrange.withValues(alpha: 0.15),
+                          child: Text(
+                            cookName.isNotEmpty
+                                ? cookName[0].toUpperCase()
+                                : 'C',
+                            style: GoogleFonts.playfairDisplay(
+                              fontSize: 40,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.primaryOrange,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -176,6 +268,81 @@ class _CookProfileScreenState extends State<CookProfileScreen>
                         ),
                       ],
                     ),
+                  const SizedBox(height: 16),
+
+                  // Follow & Order buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _isFollowLoading
+                            ? Container(
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                      color: AppTheme.primaryOrange),
+                                ),
+                                child: const Center(
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppTheme.primaryOrange,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : ElevatedButton.icon(
+                                onPressed: _toggleFollow,
+                                icon: Icon(
+                                  isFollowed
+                                      ? Icons.person_remove_outlined
+                                      : Icons.person_add_outlined,
+                                  size: 18,
+                                ),
+                                label: Text(
+                                    isFollowed ? 'Following' : 'Follow'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isFollowed
+                                      ? AppTheme.primaryOrange
+                                      : Colors.white,
+                                  foregroundColor: isFollowed
+                                      ? Colors.white
+                                      : AppTheme.primaryOrange,
+                                  elevation: 0,
+                                  side: const BorderSide(
+                                      color: AppTheme.primaryOrange),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 12),
+                                ),
+                              ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            _tabController.animateTo(0);
+                          },
+                          icon: const Icon(Icons.restaurant_menu, size: 18),
+                          label: const Text('Order'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryOrange,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 20),
 
                   // Stats row
@@ -210,9 +377,9 @@ class _CookProfileScreenState extends State<CookProfileScreen>
                             height: 40,
                             color: AppTheme.lightGrey),
                         _StatItem(
-                          value: '${cook?.totalReviews ?? _reviews.length}',
-                          label: 'Reviews',
-                          icon: Icons.rate_review_outlined,
+                          value: '${cook?.followersCount ?? 0}',
+                          label: 'Followers',
+                          icon: Icons.people_outline,
                           iconColor: AppTheme.greyText,
                         ),
                         Container(
@@ -257,6 +424,76 @@ class _CookProfileScreenState extends State<CookProfileScreen>
                       ),
                     ),
                     const SizedBox(height: 20),
+                  ],
+
+                  // Pickup Locations
+                  if (cook != null && cook.pickupLocations.isNotEmpty) ...[
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Pickup Locations',
+                        style: GoogleFonts.playfairDisplay(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.darkText,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ...cook.pickupLocations
+                        .where((loc) => loc.isActive)
+                        .map((loc) => Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border:
+                                    Border.all(color: AppTheme.lightGrey),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primaryOrange
+                                          .withValues(alpha: 0.1),
+                                      borderRadius:
+                                          BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(
+                                      Icons.store_outlined,
+                                      size: 18,
+                                      color: AppTheme.primaryOrange,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          loc.label,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        Text(
+                                          loc.fullAddress,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: AppTheme.greyText,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )),
+                    const SizedBox(height: 12),
                   ],
 
                   const SizedBox(height: 8),
@@ -528,7 +765,7 @@ class _CookMealCard extends StatelessWidget {
                         ],
                         const Spacer(),
                         Text(
-                          'A\$${meal.effectivePrice.toStringAsFixed(2)}',
+                          '${currencySymbol(meal.currency)}${meal.effectivePrice.toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,

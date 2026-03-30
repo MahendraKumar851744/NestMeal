@@ -31,6 +31,7 @@ class MealProvider extends ChangeNotifier {
     String? search,
     String? ordering,
     String? fulfillmentModes,
+    String? availableDays,
     String? cook,
     int? page,
   }) async {
@@ -51,6 +52,9 @@ class MealProvider extends ChangeNotifier {
       if (ordering != null) queryParams['ordering'] = ordering;
       if (fulfillmentModes != null) {
         queryParams['fulfillment_modes'] = fulfillmentModes;
+      }
+      if (availableDays != null) {
+        queryParams['available_days'] = availableDays;
       }
       if (cook != null) queryParams['cook'] = cook;
       if (page != null) queryParams['page'] = page.toString();
@@ -175,6 +179,18 @@ class MealProvider extends ChangeNotifier {
     } finally {
       isLoading = false;
       notifyListeners();
+    }
+  }
+
+  /// Fetch meals by a specific cook (does not overwrite [meals]).
+  Future<List<MealModel>> fetchMealsByCook(String cookId) async {
+    try {
+      final response =
+          await _apiService.get('${ApiConfig.mealsUrl}/?cook=$cookId');
+      final results = response is List ? response : response['results'] as List;
+      return results.map((json) => MealModel.fromJson(json)).toList();
+    } catch (_) {
+      return [];
     }
   }
 

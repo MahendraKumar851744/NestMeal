@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'coupons',
     'delivery',
     'notifications',
+    'stories',
 ]
 
 MIDDLEWARE = [
@@ -130,7 +131,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
-MEDIA_URL = 'media/'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -139,3 +140,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 PLATFORM_COMMISSION_RATE = 0.10  # 10%
 PLATFORM_FEE_RATE = 0.03  # 3% service fee to customer
 TAX_RATE = 0.05  # 5% tax
+
+# OTP config — set to False when real SMS provider is connected
+MOCK_OTP = True
+
+# Stripe config
+STRIPE_PUBLISHABLE_KEY = 'pk_test_51TFuhvDjhz5B3fVQVenaO1KM7WaHnrQPOqNLdJCFXHfXFKRjXyPAAQfTHB79pw3pnH1Tnt0t3vgm4dGh1ug7xSlC00lXh9La8M'
+STRIPE_SECRET_KEY = 'sk_test_REPLACE_WITH_YOUR_SECRET_KEY'
+STRIPE_CURRENCY = 'aud'

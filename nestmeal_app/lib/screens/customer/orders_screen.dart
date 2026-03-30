@@ -300,31 +300,62 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: isPickup
-                          ? const Color(0xFFF97316)
-                          : Colors.blue.shade400,
-                      width: 1.2,
+              Row(
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isPickup
+                            ? const Color(0xFFF97316)
+                            : Colors.blue.shade400,
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Text(
+                      isPickup ? 'Pickup' : 'Delivery',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: isPickup
+                            ? const Color(0xFFF97316)
+                            : Colors.blue.shade400,
+                      ),
                     ),
                   ),
-                  child: Text(
-                    isPickup ? 'Pickup' : 'Delivery',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: isPickup
-                          ? const Color(0xFFF97316)
-                          : Colors.blue.shade400,
+                  if (isPickup &&
+                      item.pickupCode != null &&
+                      item.pickupCode!.isNotEmpty &&
+                      _showActive) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF97316).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.pin, size: 14,
+                              color: Color(0xFFF97316)),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Code: ${item.pickupCode}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFFF97316),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ),
+                  ],
+                ],
               ),
             ],
           ),

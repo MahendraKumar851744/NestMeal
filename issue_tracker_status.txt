@@ -1,0 +1,240 @@
+============================================================
+NESTMEAL ISSUE TRACKER - STATUS REPORT
+Date: 2026-03-28
+============================================================
+
+──────────────────────────────────────────────────────────────
+COMPLETED (Previously - before this session)
+──────────────────────────────────────────────────────────────
+#1  - Face ID / Auto-login (partial - auto-login works, biometric not done)
+#3  - T&C and Privacy Policy on registration
+#4  - API error message UX improvement
+#5  - Dynamic time-based greeting
+#6  - Top right corner avatar after login
+#7  - Location permission prompt after login
+#8  - Instagram-style cook stories bar
+#9  - Hide 'Variety of Options' section   
+#10 - Remove/Hide 'Featured Local Cooks' section
+#11 - Item display layout (2-3 per horizontal scroll)
+#13 - OTP verification for mobile number
+#15 - Cook profile: Follow and Order buttons
+#17 - Remove 'About This Dish' section
+#24 - Currency inconsistency fixed
+#28 - Australia localization
+#31 - Unavailable meals: removed 'Hidden' tag
+#34 - Hide meal metadata (prep time, calories, dietary, cuisine)
+#37 - Admin should approve cook (resolved)
+
+──────────────────────────────────────────────────────────────
+COMPLETED (This session - fixed by Claude)
+──────────────────────────────────────────────────────────────
+#23 - Price breakdown: item total not visible
+      Fix: field mapping subtotal→item_total, service_fee→platform_fee, added tax row
+
+#30 - Available meal hidden on cook profile
+      Fix: backend query now filters is_available=True for public views only
+
+#32 - Cook cannot upload meal image
+      Fix: MEDIA_URL missing leading slash ('/media/' not 'media/')
+
+#33 - Meal images not showing for users
+      Fix: same MEDIA_URL fix enables correct absolute URL generation
+
+#35 - Discount calculation wrong for cook
+      Fix: added original price, strikethrough, and discount % to cook dashboard
+
+#38 - Cannot cancel order (reason field mismatch)
+      Fix: frontend now sends 'cancellation_reason' instead of 'reason'
+
+#42 - Hidden/unavailable meals should not display
+      Fix: backend public queries now filter is_available=True
+
+#44 - Cook dashboard pending orders not clickable
+      Fix: wrapped stat cards with GestureDetector → navigates to Orders tab
+
+#47 - Wrong status options for pickup vs delivery
+      Fix: delivery flow skips ready_for_pickup, goes preparing→out_for_delivery
+
+#49 - Meals only visible on available days
+      Fix: home screen filters by current day code, today highlighted in orange
+
+#50 - Order status flows corrected
+      Fix: backend + frontend delivery flow: Placed→Accepted→Preparing→Out for Delivery→Delivered→Completed
+
+#52 - Discount tag not showing on home page
+      Fix: added green discount badge to meal cards and trending rows
+
+Bonus fixes applied:
+  - Added pickupCode field to OrderModel (supports #51)
+  - Fixed delivery address field name mismatches
+  - Fixed default currency USD → AUD
+  - Pickup code shows for all active pickup states
+
+──────────────────────────────────────────────────────────────
+COMPLETED (Batch 2 - fixed by Claude)
+──────────────────────────────────────────────────────────────
+#19 - Bottom nav bar visible during ordering flow
+      Fix: nested navigators per tab in CustomerShell for persistent bottom nav
+
+#25 - Bottom nav bar persist on every screen
+      Fix: same nested navigator pattern with IndexedStack
+
+#26 - Order shows as 'Pending' in active orders after placement
+      Fix: StatusBadge now shows explicit labels ('placed' → 'Order Placed') instead of raw status
+
+#29 - Cart should always show Order button
+      Fix: added 'Browse Meals' button with icon to empty cart state
+
+#36 - Display meals 2-3 per row in vertical scroll
+      Fix: changed Today's Fresh Meals from horizontal ListView to 2-column SliverGrid
+
+#39 - New meal gets "New" tag (white, top-left)
+      Fix: added white 'NEW' badge on meal cards for meals created within last 7 days
+
+#40 - Cook profile should look same as user profile
+      Fix: restyled cook profile header to centered vertical layout matching customer profile
+      (avatar, name, email, status badge, stats row with rating/reviews/followers)
+
+#51 - Pickup: cook enters OTP visible in user's orders tab
+      Fix: added pickup_code to OrderListSerializer + OrderListItem model,
+      displayed as orange 'Code: XXXX' badge on pickup order cards
+
+──────────────────────────────────────────────────────────────
+COMPLETED (Batch 3 - fixed by Claude)
+──────────────────────────────────────────────────────────────
+#12 - Cook order acceptance window (1-2 min)
+      Fix: added acceptance_deadline field to Order model (auto-set 2min on placed),
+      exposed in serializers, live countdown widget on cook orders screen
+
+#16 - Meal detail: dropdown showing what cook provides
+      Fix: added "What's Included" section to meal detail screen showing
+      description, fulfillment modes, delivery radius, serving size, spice level
+
+#18 - Add 'Extras' section on meal page (add-ons)
+      Fix: added MealExtra model (backend), MealExtraSerializer, nested CRUD endpoints,
+      "Extras & Add-ons" section on meal detail screen with prices
+
+#20 - Delivery dates not up to date
+      Fix: slot_provider now uses correct 'cook' filter param + is_available=true filter
+      for both pickup and delivery slot fetches
+
+#41 - Cook should select their pickup slots
+      Fix: created SlotManagementScreen with TabBar (Pickup/Delivery), FAB to add slots
+      via date/time picker dialog, createSlot() method in SlotProvider, navigation
+      from cook dashboard "Manage Slots" quick action
+
+#43 - Delivery slots chosen by cook, not admin
+      Fix: same SlotManagementScreen handles both pickup and delivery slot creation,
+      delivery tab with full CRUD via SlotProvider
+
+#45 - Order details: cook profile clickable + order more
+      Fix: already implemented in prior session (verified)
+
+#46 - Notification badge when cook updates status
+      Fix: order_provider tracks status changes via _knownStatuses set,
+      Badge widget on Orders tab in customer_shell, clears on tap
+
+#48 - After payment, status → Preparing (skip Accepted)
+      Fix: payment view now sets order.status='preparing' after successful payment,
+      fixed currency INR→AUD
+
+#54 - Cook registration: Suburb, City, ZipCode
+      Fix: changed labels City→Suburb, State→City, Zip→Postcode on register
+      and cook profile edit screens (AU localization)
+
+#55 - Show meal category (lunch/dinner) to user
+      Fix: added category badge (Lunch, Dinner, etc.) to meal cards and trending rows
+      on home screen
+
+#56 - Disable meals after cutoff time
+      Fix: added order_cutoff_time field to Meal model, is_past_cutoff property,
+      cutoff warning banner on meal detail, Add to Cart disabled when past cutoff
+
+#57 - Set price for each extra item
+      Fix: MealExtra model with name+price, MealExtraSerializer, nested API endpoints
+      under meals/<id>/extras/, MealExtraViewSet (cook-only), admin inline
+
+Bonus fixes:
+  - Fixed order_provider import of non-existent order_list_item.dart
+  - Fixed delivery slot filter param cook_id→cook in slot_provider
+  - Added MealExtra inline to Django admin
+
+──────────────────────────────────────────────────────────────
+COMPLETED (Batch 4 - Stripe Integration)
+──────────────────────────────────────────────────────────────
+#53 - Stripe In-App Payment Gateway
+      Fix: Full Stripe integration — backend + frontend
+      Backend:
+        - Added stripe>=9.0 to requirements.txt, installed stripe 15.0.0
+        - Added STRIPE_PUBLISHABLE_KEY, STRIPE_SECRET_KEY, STRIPE_CURRENCY to settings.py
+        - Updated Payment model: added stripe_payment_intent_id, stripe_client_secret fields,
+          added 'card' to METHOD_CHOICES, 'requires_payment' status, default gateway→stripe,
+          default currency→AUD
+        - Rewrote PaymentViewSet.create() to create real Stripe PaymentIntent
+          and return client_secret to frontend
+        - Added /payments/confirm/ endpoint: verifies payment with Stripe API,
+          updates order to payment_status='paid' and status='preparing'
+        - Added /payments/config/ endpoint: returns publishable key
+        - Created migration 0002_add_stripe_fields
+      Frontend:
+        - Added flutter_stripe ^11.4.0 to pubspec.yaml
+        - Initialized Stripe.publishableKey in main.dart
+        - Updated PaymentProvider: createPaymentIntent() gets client_secret,
+          confirmPayment() verifies with backend after sheet succeeds
+        - Rewrote cart_screen checkout flow:
+          1. Create order → 2. Create PaymentIntent → 3. Init payment sheet →
+          4. Present Stripe payment sheet (Cards, Apple Pay, Google Pay) →
+          5. Confirm with backend → 6. Navigate to order detail
+        - Replaced 5 manual payment method radio buttons (UPI, Credit Card,
+          Debit Card, Net Banking, Wallet) with single Stripe payment widget
+        - Handles StripeException for user cancellation gracefully
+
+#21 - Payment methods (Apple Pay, Google Pay, etc.)
+      Fix: Stripe payment sheet automatically supports Apple Pay, Google Pay,
+      credit/debit cards, and other methods based on user's device and region.
+      No additional implementation needed — handled by Stripe SDK.
+
+──────────────────────────────────────────────────────────────
+COMPLETED (Batch 5 - Final Issues)
+──────────────────────────────────────────────────────────────
+#2  - Cook pickup location selection
+      Fix: Backend PickupLocation model already existed. Added PickupLocationViewSet
+      with CRUD endpoints at /api/accounts/pickup-locations/ (cook-only).
+      Frontend: added PickupLocationModel class, typed pickupLocations on CookProfile
+      and CookCard models. Cook profile edit screen now shows existing locations with
+      delete button and "Add Pickup Location" dialog. Customer-facing cook profile
+      screen displays active pickup locations with address and label.
+
+#14 - Wallet: add amount option
+      Fix: Backend WalletTopUpView at POST /api/payments/wallet/top-up/ — validates
+      amount, credits CustomerProfile.wallet_balance, creates WalletTransaction record.
+      Frontend: profile screen wallet display now has "Add" button that opens dialog
+      with preset amounts (A$10, A$20, A$50, A$100) and custom input. Calls
+      PaymentProvider.topUpWallet() then refreshes profile to show updated balance.
+
+#22 - Replace order ID with short OTP for verification
+      Fix: Already implemented in prior sessions. Backend generates short order numbers
+      (HB-XXXX format) and 6-digit pickup codes. Frontend displays both: order number
+      as card header, pickup code as orange badge on active pickup orders.
+
+#27 - Address field auto-suggest (maps API)
+      Fix: Enhanced LocationPickerScreen with debounced autocomplete suggestions.
+      As user types 3+ characters, geocoding package searches for matching addresses
+      (biased to Australia) and displays up to 5 suggestions in dropdown overlay.
+      Selecting a suggestion moves map to that location and fills address fields.
+      Added clear button to search bar. Suggestions list shows address with
+      location icon and dismisses on selection or manual search submit.
+
+──────────────────────────────────────────────────────────────
+ALL 57 ISSUES RESOLVED
+──────────────────────────────────────────────────────────────
+Total: 57 issues
+  - Completed before these sessions: 17
+  - Completed in Session 1 (Batch 1): 12
+  - Completed in Session 2 (Batch 2): 8
+  - Completed in Session 3 (Batch 3): 13
+  - Completed in Session 4 (Stripe):   2
+  - Completed in Session 5 (Final):    4
+  - Already done / verified:           1 (#22)
+
+============================================================

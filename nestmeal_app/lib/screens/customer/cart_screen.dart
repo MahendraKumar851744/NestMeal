@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../services/stripe_service.dart' as stripe_svc;
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../config/theme.dart';
@@ -27,7 +28,6 @@ class _CartScreenState extends State<CartScreen> {
   final _deliveryStateController = TextEditingController();
   final _deliveryZipController = TextEditingController();
   final _specialInstructionsController = TextEditingController();
-  String _selectedPaymentMethod = 'upi';
   bool _isPlacingOrder = false;
   AddressModel? _selectedAddress;
   bool _useNewAddress = false;
@@ -168,6 +168,7 @@ class _CartScreenState extends State<CartScreen> {
       final orderProvider = context.read<OrderProvider>();
       final paymentProvider = context.read<PaymentProvider>();
 
+      // 1. Create the order
       final items = cart.items
           .map((item) => {
                 'mealId': item.mealId,
@@ -205,10 +206,26 @@ class _CartScreenState extends State<CartScreen> {
       );
 
       final order = orderProvider.selectedOrder;
-      if (order != null) {
-        await paymentProvider.createPayment(order.id, _selectedPaymentMethod);
+      if (order == null) throw Exception('Order creation failed');
+
+      // 2. Create Stripe PaymentIntent
+      final intentData = await paymentProvider.createPaymentIntent(order.id);
+      final clientSecret = intentData['client_secret'] as String;
+      final paymentIntentId =
+          intentData['stripe_payment_intent_id'] as String;
+
+      if (stripe_svc.isStripeSupported) {
+        // 3. Init & present the Stripe payment sheet (mobile/desktop)
+        await stripe_svc.initAndPresentPaymentSheet(
+          clientSecret: clientSecret,
+          merchantDisplayName: 'NestMeal',
+        );
       }
 
+      // 4. Confirm payment with backend
+      await paymentProvider.confirmPayment(paymentIntentId);
+
+      // 6. Clear cart and navigate
       cart.clearCart();
       _specialInstructionsController.clear();
       _deliveryStreetController.clear();
@@ -219,19 +236,27 @@ class _CartScreenState extends State<CartScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Order placed successfully!'),
+            content: Text('Payment successful! Order placed.'),
             backgroundColor: AppTheme.successGreen,
           ),
         );
 
-        if (order != null) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => OrderDetailScreen(orderId: order.id),
-            ),
-          );
-        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OrderDetailScreen(orderId: order.id),
+          ),
+        );
+      }
+    } on UnsupportedError catch (e) {
+      // Stripe not supported on this platform (web)
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message ?? 'Payments not supported on this platform'),
+            backgroundColor: AppTheme.errorRed,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -594,6 +619,33 @@ class _CartScreenState extends State<CartScreen> {
             'Browse meals and add something delicious!',
             style: TextStyle(color: AppTheme.greyText, fontSize: 14),
           ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () {
+              // Switch to Home tab (index 0) via the CustomerShell
+              final navState = Navigator.of(context, rootNavigator: true);
+              if (navState.canPop()) {
+                navState.pop();
+              }
+            },
+            icon: const Icon(Icons.restaurant_menu, color: Colors.white),
+            label: const Text(
+              'Browse Meals',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryOrange,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 0,
+            ),
+          ),
         ],
       ),
     );
@@ -768,9 +820,9 @@ class _CartScreenState extends State<CartScreen> {
 
               const SizedBox(height: 16),
 
-              // Payment Method
+              // Payment Method — Stripe
               Text(
-                'Payment Method',
+                'Payment',
                 style: GoogleFonts.playfairDisplay(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -778,43 +830,60 @@ class _CartScreenState extends State<CartScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              _PaymentOption(
-                label: 'UPI',
-                icon: Icons.account_balance_outlined,
-                isSelected: _selectedPaymentMethod == 'upi',
-                onTap: () => setState(() => _selectedPaymentMethod = 'upi'),
-              ),
-              const SizedBox(height: 8),
-              _PaymentOption(
-                label: 'Credit Card',
-                icon: Icons.credit_card_outlined,
-                isSelected: _selectedPaymentMethod == 'credit_card',
-                onTap: () =>
-                    setState(() => _selectedPaymentMethod = 'credit_card'),
-              ),
-              const SizedBox(height: 8),
-              _PaymentOption(
-                label: 'Debit Card',
-                icon: Icons.credit_card_outlined,
-                isSelected: _selectedPaymentMethod == 'debit_card',
-                onTap: () =>
-                    setState(() => _selectedPaymentMethod = 'debit_card'),
-              ),
-              const SizedBox(height: 8),
-              _PaymentOption(
-                label: 'Net Banking',
-                icon: Icons.language_outlined,
-                isSelected: _selectedPaymentMethod == 'net_banking',
-                onTap: () =>
-                    setState(() => _selectedPaymentMethod = 'net_banking'),
-              ),
-              const SizedBox(height: 8),
-              _PaymentOption(
-                label: 'Wallet',
-                icon: Icons.account_balance_wallet_outlined,
-                isSelected: _selectedPaymentMethod == 'wallet',
-                onTap: () =>
-                    setState(() => _selectedPaymentMethod = 'wallet'),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppTheme.primaryOrange,
+                    width: 1.5,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF635BFF).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.credit_card,
+                        color: Color(0xFF635BFF),
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Pay with Stripe',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Cards, Apple Pay, Google Pay & more',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.greyText,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.lock_outlined,
+                      size: 18,
+                      color: AppTheme.successGreen,
+                    ),
+                  ],
+                ),
               ),
 
               const SizedBox(height: 24),
@@ -1367,63 +1436,6 @@ class _SlotSelector extends StatelessWidget {
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-// ─── Payment Option ─────────────────────────────────────────────────────────
-
-class _PaymentOption extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _PaymentOption({
-    required this.label,
-    required this.icon,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? AppTheme.primaryOrange : AppTheme.lightGrey,
-            width: isSelected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 20,
-                color: isSelected ? AppTheme.primaryOrange : AppTheme.greyText),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isSelected ? AppTheme.darkText : AppTheme.greyText,
-              ),
-            ),
-            const Spacer(),
-            Icon(
-              isSelected
-                  ? Icons.radio_button_checked
-                  : Icons.radio_button_off,
-              size: 20,
-              color: isSelected ? AppTheme.primaryOrange : AppTheme.lightGrey,
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Meal, MealImage, PickupSlot, RecurringSlotTemplate
+from .models import Meal, MealExtra, MealImage, PickupSlot, RecurringSlotTemplate
 
 
 # ---------------------------------------------------------------------------
@@ -12,7 +12,7 @@ class MealImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = MealImage
         fields = ['id', 'meal', 'image', 'image_url', 'display_order', 'created_at']
-        read_only_fields = ['id', 'created_at', 'image_url']
+        read_only_fields = ['id', 'meal', 'created_at', 'image_url']
         extra_kwargs = {'image': {'write_only': True}}
 
     def get_image_url(self, obj):
@@ -22,6 +22,17 @@ class MealImageSerializer(serializers.ModelSerializer):
         elif obj.image:
             return obj.image.url
         return None
+
+
+# ---------------------------------------------------------------------------
+# MealExtra
+# ---------------------------------------------------------------------------
+
+class MealExtraSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MealExtra
+        fields = ['id', 'meal', 'name', 'price', 'is_available', 'display_order', 'created_at']
+        read_only_fields = ['id', 'meal', 'created_at']
 
 
 # ---------------------------------------------------------------------------
@@ -59,9 +70,11 @@ class CookProfileCardSerializer(serializers.Serializer):
 
 class MealSerializer(serializers.ModelSerializer):
     images = MealImageSerializer(many=True, read_only=True)
+    extras = MealExtraSerializer(many=True, read_only=True)
     effective_price = serializers.DecimalField(
         max_digits=10, decimal_places=2, read_only=True,
     )
+    is_past_cutoff = serializers.BooleanField(read_only=True)
     cook_display_name = serializers.CharField(
         source='cook.display_name', read_only=True,
     )
@@ -76,10 +89,10 @@ class MealSerializer(serializers.ModelSerializer):
             'dietary_tags', 'allergen_info',
             'spice_level', 'serving_size', 'calories_approx',
             'preparation_time_mins', 'fulfillment_modes',
-            'is_available', 'available_days',
+            'is_available', 'available_days', 'order_cutoff_time', 'is_past_cutoff',
             'total_orders', 'avg_rating', 'tags',
             'is_featured', 'status',
-            'images',
+            'images', 'extras',
             'created_at', 'updated_at',
         ]
         read_only_fields = [
@@ -97,6 +110,8 @@ class MealListSerializer(serializers.ModelSerializer):
     effective_price = serializers.DecimalField(
         max_digits=10, decimal_places=2, read_only=True,
     )
+    is_past_cutoff = serializers.BooleanField(read_only=True)
+    cook_id = serializers.UUIDField(source='cook.id', read_only=True)
     cook_display_name = serializers.CharField(
         source='cook.display_name', read_only=True,
     )
@@ -104,11 +119,15 @@ class MealListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Meal
         fields = [
-            'id', 'title', 'short_description',
+            'id', 'cook_id', 'title', 'short_description',
             'price', 'discount_percentage', 'effective_price',
             'category', 'cuisine_type', 'meal_type', 'spice_level',
             'avg_rating', 'images',
             'cook_display_name', 'fulfillment_modes',
+            'is_available', 'available_days', 'status', 'tags',
+            'is_featured',
+            'order_cutoff_time', 'is_past_cutoff',
+            'created_at',
         ]
 
 
@@ -118,9 +137,11 @@ class MealListSerializer(serializers.ModelSerializer):
 
 class MealDetailSerializer(serializers.ModelSerializer):
     images = MealImageSerializer(many=True, read_only=True)
+    extras = MealExtraSerializer(many=True, read_only=True)
     effective_price = serializers.DecimalField(
         max_digits=10, decimal_places=2, read_only=True,
     )
+    is_past_cutoff = serializers.BooleanField(read_only=True)
     cook = CookProfileCardSerializer(read_only=True)
 
     class Meta:
@@ -133,10 +154,10 @@ class MealDetailSerializer(serializers.ModelSerializer):
             'dietary_tags', 'allergen_info',
             'spice_level', 'serving_size', 'calories_approx',
             'preparation_time_mins', 'fulfillment_modes',
-            'is_available', 'available_days',
+            'is_available', 'available_days', 'order_cutoff_time', 'is_past_cutoff',
             'total_orders', 'avg_rating', 'tags',
             'is_featured', 'status',
-            'images',
+            'images', 'extras',
             'created_at', 'updated_at',
         ]
 
@@ -162,7 +183,7 @@ class MealCreateUpdateSerializer(serializers.ModelSerializer):
             'dietary_tags', 'allergen_info',
             'spice_level', 'serving_size', 'calories_approx',
             'preparation_time_mins', 'fulfillment_modes',
-            'is_available', 'available_days', 'tags',
+            'is_available', 'available_days', 'order_cutoff_time', 'tags',
             'is_featured', 'status',
             'created_at', 'updated_at',
         ]
@@ -227,7 +248,7 @@ class PickupSlotSerializer(serializers.ModelSerializer):
             'location_latitude', 'location_longitude',
             'status', 'created_at',
         ]
-        read_only_fields = ['id', 'booked_orders', 'created_at']
+        read_only_fields = ['id', 'cook', 'booked_orders', 'created_at']
 
     def validate(self, attrs):
         # Ensure start_time < end_time
@@ -257,7 +278,7 @@ class RecurringSlotTemplateSerializer(serializers.ModelSerializer):
             'max_orders', 'effective_from', 'effective_until',
             'is_active', 'slot_type', 'created_at',
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'cook', 'created_at']
 
     def validate(self, attrs):
         start = attrs.get('start_time', getattr(self.instance, 'start_time', None))

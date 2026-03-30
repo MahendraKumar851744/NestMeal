@@ -13,10 +13,11 @@ from django_filters.rest_framework import DjangoFilterBackend
 from accounts.permissions import IsAdmin, IsCook, IsCustomer
 
 from .filters import MealFilter
-from .models import Meal, MealImage, PickupSlot, RecurringSlotTemplate
+from .models import Meal, MealExtra, MealImage, PickupSlot, RecurringSlotTemplate
 from .serializers import (
     MealCreateUpdateSerializer,
     MealDetailSerializer,
+    MealExtraSerializer,
     MealImageSerializer,
     MealListSerializer,
     MealSerializer,
@@ -41,7 +42,7 @@ class MealViewSet(viewsets.ModelViewSet):
     queryset = (
         Meal.objects
         .select_related('cook')
-        .prefetch_related('images')
+        .prefetch_related('images', 'extras')
         .all()
     )
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -82,9 +83,9 @@ class MealViewSet(viewsets.ModelViewSet):
             try:
                 cook_profile = user.cook_profile
                 if self.action in ('list', 'retrieve'):
-                    # Show the cook's own meals (any status) plus other active meals
+                    # Show the cook's own meals (any status) plus other active+available meals
                     qs = qs.filter(
-                        Q(cook=cook_profile) | Q(status='active')
+                        Q(cook=cook_profile) | Q(status='active', is_available=True)
                     )
                 else:
                     # Management endpoints scoped to own meals only
@@ -95,8 +96,8 @@ class MealViewSet(viewsets.ModelViewSet):
                 else:
                     qs = qs.none()
         elif self.action in ('list', 'retrieve'):
-            # Public views only show active meals
-            qs = qs.filter(status='active')
+            # Public views only show active, available meals
+            qs = qs.filter(status='active', is_available=True)
         return qs
 
     # --- destroy override: soft-archive ------------------------------------
@@ -161,8 +162,13 @@ class PickupSlotViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated(), IsCook()]
 
     def get_queryset(self):
+        from django.utils import timezone
+
         qs = PickupSlot.objects.select_related('cook').all()
-        if self.action not in ('list', 'retrieve'):
+        if self.action in ('list', 'retrieve'):
+            # Public views: only show future, available slots
+            qs = qs.filter(date__gte=timezone.now().date())
+        else:
             if self.request.user.is_authenticated and self.request.user.role == 'cook':
                 try:
                     qs = qs.filter(cook=self.request.user.cook_profile)
@@ -195,6 +201,32 @@ class RecurringSlotTemplateViewSet(viewsets.ModelViewSet):
 
 
 # ---------------------------------------------------------------------------
+# MealExtra ViewSet (cook only, own meals)
+# ---------------------------------------------------------------------------
+
+class MealExtraViewSet(viewsets.ModelViewSet):
+    serializer_class = MealExtraSerializer
+    permission_classes = [IsAuthenticated, IsCook]
+
+    def get_queryset(self):
+        meal_id = self.kwargs.get('meal_pk')
+        return MealExtra.objects.filter(
+            meal_id=meal_id, meal__cook=self.request.user.cook_profile,
+        )
+
+    def perform_create(self, serializer):
+        meal_id = self.kwargs.get('meal_pk')
+        try:
+            meal = Meal.objects.get(
+                pk=meal_id, cook=self.request.user.cook_profile,
+            )
+        except Meal.DoesNotExist:
+            from rest_framework.exceptions import NotFound
+            raise NotFound('Meal not found or you do not own it.')
+        serializer.save(meal=meal)
+
+
+# ---------------------------------------------------------------------------
 # Featured Meals (public)
 # ---------------------------------------------------------------------------
 
@@ -207,7 +239,7 @@ class FeaturedMealsView(generics.ListAPIView):
         return (
             Meal.objects
             .select_related('cook')
-            .prefetch_related('images')
+            .prefetch_related('images', 'extras')
             .filter(is_featured=True, status='active', is_available=True)
             .order_by('-created_at')
         )
@@ -244,7 +276,7 @@ class AvailableNowView(generics.ListAPIView):
         return (
             Meal.objects
             .select_related('cook')
-            .prefetch_related('images')
+            .prefetch_related('images', 'extras')
             .filter(
                 status='active',
                 is_available=True,

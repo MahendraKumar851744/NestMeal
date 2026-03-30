@@ -1,4 +1,45 @@
 import 'helpers.dart';
+import 'user_model.dart' show PickupLocationModel;
+
+class MealExtra {
+  final String id;
+  final String meal;
+  final String name;
+  final double price;
+  final bool isAvailable;
+  final int displayOrder;
+
+  MealExtra({
+    required this.id,
+    required this.meal,
+    required this.name,
+    required this.price,
+    required this.isAvailable,
+    required this.displayOrder,
+  });
+
+  factory MealExtra.fromJson(Map<String, dynamic> json) {
+    return MealExtra(
+      id: json['id'].toString(),
+      meal: json['meal']?.toString() ?? '',
+      name: json['name'] ?? '',
+      price: toSafeDouble(json['price']),
+      isAvailable: json['is_available'] ?? true,
+      displayOrder: json['display_order'] ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'meal': meal,
+      'name': name,
+      'price': price,
+      'is_available': isAvailable,
+      'display_order': displayOrder,
+    };
+  }
+}
 
 class MealImage {
   final String id;
@@ -38,12 +79,15 @@ class CookCard {
   final String bio;
   final double avgRating;
   final int totalReviews;
+  final int followersCount;
+  final bool isFollowed;
   final String kitchenCity;
   final String kitchenState;
   final bool deliveryEnabled;
   final double deliveryRadiusKm;
   final bool isActive;
   final String status;
+  final List<PickupLocationModel> pickupLocations;
 
   CookCard({
     required this.id,
@@ -51,12 +95,15 @@ class CookCard {
     required this.bio,
     required this.avgRating,
     required this.totalReviews,
+    this.followersCount = 0,
+    this.isFollowed = false,
     required this.kitchenCity,
     required this.kitchenState,
     required this.deliveryEnabled,
     required this.deliveryRadiusKm,
     required this.isActive,
     required this.status,
+    this.pickupLocations = const [],
   });
 
   factory CookCard.fromJson(Map<String, dynamic> json) {
@@ -66,12 +113,18 @@ class CookCard {
       bio: json['bio'] ?? '',
       avgRating: toSafeDouble(json['avg_rating']),
       totalReviews: json['total_reviews'] ?? 0,
+      followersCount: json['followers_count'] ?? 0,
+      isFollowed: json['is_followed'] ?? false,
       kitchenCity: json['kitchen_city'] ?? '',
       kitchenState: json['kitchen_state'] ?? '',
       deliveryEnabled: json['delivery_enabled'] ?? false,
       deliveryRadiusKm: toSafeDouble(json['delivery_radius_km']),
       isActive: json['is_active'] ?? false,
       status: json['status'] ?? '',
+      pickupLocations: (json['pickup_locations'] as List?)
+              ?.map((loc) => PickupLocationModel.fromJson(loc))
+              .toList() ??
+          [],
     );
   }
 
@@ -82,6 +135,8 @@ class CookCard {
       'bio': bio,
       'avg_rating': avgRating,
       'total_reviews': totalReviews,
+      'followers_count': followersCount,
+      'is_followed': isFollowed,
       'kitchen_city': kitchenCity,
       'kitchen_state': kitchenState,
       'delivery_enabled': deliveryEnabled,
@@ -120,6 +175,9 @@ class MealModel {
   final bool isFeatured;
   final String status;
   final List<MealImage> images;
+  final List<MealExtra> extras;
+  final String? orderCutoffTime;
+  final bool isPastCutoff;
   final String cookDisplayName;
   final String createdAt;
   final String updatedAt;
@@ -146,12 +204,15 @@ class MealModel {
     required this.fulfillmentModes,
     required this.isAvailable,
     required this.availableDays,
+    this.orderCutoffTime,
+    this.isPastCutoff = false,
     required this.totalOrders,
     required this.avgRating,
     required this.tags,
     required this.isFeatured,
     required this.status,
     required this.images,
+    this.extras = const [],
     required this.cookDisplayName,
     required this.createdAt,
     required this.updatedAt,
@@ -189,6 +250,12 @@ class MealModel {
               ?.map((img) => MealImage.fromJson(img))
               .toList() ??
           [],
+      extras: (json['extras'] as List?)
+              ?.map((e) => MealExtra.fromJson(e))
+              .toList() ??
+          [],
+      orderCutoffTime: json['order_cutoff_time'],
+      isPastCutoff: json['is_past_cutoff'] ?? false,
       cookDisplayName: json['cook_display_name'] ??
           ((json['cook'] is Map) ? (json['cook']['display_name'] ?? '') : ''),
       createdAt: json['created_at'] ?? '',
@@ -219,12 +286,14 @@ class MealModel {
       'fulfillment_modes': fulfillmentModes,
       'is_available': isAvailable,
       'available_days': availableDays,
+      'order_cutoff_time': orderCutoffTime,
       'total_orders': totalOrders,
       'avg_rating': avgRating,
       'tags': tags,
       'is_featured': isFeatured,
       'status': status,
       'images': images.map((img) => img.toJson()).toList(),
+      'extras': extras.map((e) => e.toJson()).toList(),
       'cook_display_name': cookDisplayName,
       'created_at': createdAt,
       'updated_at': updatedAt,
@@ -257,12 +326,15 @@ class MealDetail extends MealModel {
     required super.fulfillmentModes,
     required super.isAvailable,
     required super.availableDays,
+    super.orderCutoffTime,
+    super.isPastCutoff,
     required super.totalOrders,
     required super.avgRating,
     required super.tags,
     required super.isFeatured,
     required super.status,
     required super.images,
+    super.extras,
     required super.cookDisplayName,
     required super.createdAt,
     required super.updatedAt,
@@ -296,6 +368,8 @@ class MealDetail extends MealModel {
       fulfillmentModes: List<String>.from(json['fulfillment_modes'] ?? []),
       isAvailable: json['is_available'] ?? false,
       availableDays: List<String>.from(json['available_days'] ?? []),
+      orderCutoffTime: json['order_cutoff_time'],
+      isPastCutoff: json['is_past_cutoff'] ?? false,
       totalOrders: json['total_orders'] ?? 0,
       avgRating: toSafeDouble(json['avg_rating']),
       tags: List<String>.from(json['tags'] ?? []),
@@ -303,6 +377,10 @@ class MealDetail extends MealModel {
       status: json['status'] ?? '',
       images: (json['images'] as List?)
               ?.map((img) => MealImage.fromJson(img))
+              .toList() ??
+          [],
+      extras: (json['extras'] as List?)
+              ?.map((e) => MealExtra.fromJson(e))
               .toList() ??
           [],
       cookDisplayName: json['cook_display_name'] ??

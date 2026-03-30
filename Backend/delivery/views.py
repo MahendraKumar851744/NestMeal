@@ -28,13 +28,19 @@ class DeliverySlotViewSet(viewsets.ModelViewSet):
     serializer_class = DeliverySlotSerializer
 
     def get_queryset(self):
+        from django.utils import timezone
+
         queryset = DeliverySlot.objects.select_related('cook')
+        today = timezone.now().date()
 
         user = self.request.user
         if user.is_authenticated and user.role == 'cook':
             queryset = queryset.filter(cook=user.cook_profile)
         elif self.action == 'list':
-            queryset = queryset.filter(is_available=True, status='open')
+            # Only show future, available, open slots to customers
+            queryset = queryset.filter(
+                is_available=True, status='open', date__gte=today,
+            )
 
         # Filter by cook
         cook_id = self.request.query_params.get('cook_id')

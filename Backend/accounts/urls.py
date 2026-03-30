@@ -12,12 +12,19 @@ from .views import (
     CookPublicListView,
     CookPublicDetailView,
     AddressViewSet,
+    PickupLocationViewSet,
+    ToggleFollowView,
+    MyFollowingListView,
+    SendOTPView,
+    VerifyOTPView,
+    ResendOTPView,
 )
 
 router = DefaultRouter()
 router.register(r'addresses', AddressViewSet, basename='address')
 router.register(r'cook-profiles', CookProfileViewSet, basename='cook-profile')
 router.register(r'customer-profiles', CustomerProfileViewSet, basename='customer-profile')
+router.register(r'pickup-locations', PickupLocationViewSet, basename='pickup-location')
 
 urlpatterns = [
     # Authentication
@@ -32,6 +39,15 @@ urlpatterns = [
     # Public cook listing and detail
     path('cooks/', CookPublicListView.as_view(), name='cook-public-list'),
     path('cooks/<uuid:pk>/', CookPublicDetailView.as_view(), name='cook-public-detail'),
+    path('cooks/<uuid:pk>/follow/', ToggleFollowView.as_view(), name='toggle-follow'),
+
+    # Following
+    path('me/following/', MyFollowingListView.as_view(), name='my-following'),
+
+    # OTP verification
+    path('otp/send/', SendOTPView.as_view(), name='send-otp'),
+    path('otp/verify/', VerifyOTPView.as_view(), name='verify-otp'),
+    path('otp/resend/', ResendOTPView.as_view(), name='resend-otp'),
 
     # Router-generated CRUD routes
     path('', include(router.urls)),

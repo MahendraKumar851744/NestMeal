@@ -159,23 +159,23 @@ class _AddMealScreenState extends State<AddMealScreen> {
       'category': _selectedCategory,
       'meal_type': _selectedMealType,
       'spice_level': _selectedSpiceLevel,
-      'cuisine_type': _cuisineTypeController.text.trim(),
-      'dietary_tags': _selectedDietaryTags.toList(),
-      'allergen_info': _selectedAllergens.toList(),
+      // 'cuisine_type': _cuisineTypeController.text.trim(),
+      // 'dietary_tags': _selectedDietaryTags.toList(),
+      // 'allergen_info': _selectedAllergens.toList(),
       'fulfillment_modes': _selectedFulfillmentModes.toList(),
       'available_days': _selectedDays.toList(),
       'is_available': true,
       'status': 'active',
-      'preparation_time_mins': int.tryParse(_prepTimeController.text.trim()) ?? 30,
+      // 'preparation_time_mins': int.tryParse(_prepTimeController.text.trim()) ?? 30,
       'tags': _tagsController.text.trim().isNotEmpty
           ? _tagsController.text.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList()
           : <String>[],
     };
 
-    final caloriesText = _caloriesController.text.trim();
-    if (caloriesText.isNotEmpty) {
-      data['calories_approx'] = int.tryParse(caloriesText);
-    }
+    // final caloriesText = _caloriesController.text.trim();
+    // if (caloriesText.isNotEmpty) {
+    //   data['calories_approx'] = int.tryParse(caloriesText);
+    // }
 
     try {
       final response = await mealProvider.createMeal(data);
@@ -430,33 +430,33 @@ class _AddMealScreenState extends State<AddMealScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _prepTimeController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Prep Time (min)',
-                        hintText: '30',
-                        suffixText: 'min',
-                      ),
-                    ),
-                  ),
+                  // const SizedBox(width: 12),
+                  // Expanded(
+                  //   child: TextFormField(
+                  //     controller: _prepTimeController,
+                  //     keyboardType: TextInputType.number,
+                  //     decoration: const InputDecoration(
+                  //       labelText: 'Prep Time (min)',
+                  //       hintText: '30',
+                  //       suffixText: 'min',
+                  //     ),
+                  //   ),
+                  // ),
                 ],
               ),
               const SizedBox(height: 16),
 
-              // Calories
-              TextFormField(
-                controller: _caloriesController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Calories (approx)',
-                  hintText: 'Optional',
-                  prefixIcon: Icon(Icons.local_fire_department_outlined),
-                ),
-              ),
-              const SizedBox(height: 20),
+              // // Calories
+              // TextFormField(
+              //   controller: _caloriesController,
+              //   keyboardType: TextInputType.number,
+              //   decoration: const InputDecoration(
+              //     labelText: 'Calories (approx)',
+              //     hintText: 'Optional',
+              //     prefixIcon: Icon(Icons.local_fire_department_outlined),
+              //   ),
+              // ),
+              // const SizedBox(height: 20),
 
               // Category Dropdown
               _buildDropdown(
@@ -485,15 +485,15 @@ class _AddMealScreenState extends State<AddMealScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Cuisine Type
-              TextFormField(
-                controller: _cuisineTypeController,
-                decoration: const InputDecoration(
-                  labelText: 'Cuisine Type',
-                  hintText: 'e.g., Indian, Italian, Chinese',
-                ),
-              ),
-              const SizedBox(height: 16),
+              // // Cuisine Type
+              // TextFormField(
+              //   controller: _cuisineTypeController,
+              //   decoration: const InputDecoration(
+              //     labelText: 'Cuisine Type',
+              //     hintText: 'e.g., Indian, Italian, Chinese',
+              //   ),
+              // ),
+              // const SizedBox(height: 16),
 
               // Tags
               TextFormField(
@@ -506,67 +506,67 @@ class _AddMealScreenState extends State<AddMealScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Dietary Tags
-              _buildSectionLabel('Dietary Tags'),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _allDietaryTags.map((tag) {
-                  final selected = _selectedDietaryTags.contains(tag);
-                  return FilterChip(
-                    label: Text(_formatTagLabel(tag)),
-                    selected: selected,
-                    onSelected: (val) {
-                      setState(() {
-                        if (val) {
-                          _selectedDietaryTags.add(tag);
-                        } else {
-                          _selectedDietaryTags.remove(tag);
-                        }
-                      });
-                    },
-                    selectedColor: AppTheme.primaryOrange,
-                    checkmarkColor: Colors.white,
-                    labelStyle: TextStyle(
-                      color: selected ? Colors.white : AppTheme.darkText,
-                      fontSize: 13,
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 20),
+              // // Dietary Tags
+              // _buildSectionLabel('Dietary Tags'),
+              // const SizedBox(height: 8),
+              // Wrap(
+              //   spacing: 8,
+              //   runSpacing: 8,
+              //   children: _allDietaryTags.map((tag) {
+              //     final selected = _selectedDietaryTags.contains(tag);
+              //     return FilterChip(
+              //       label: Text(_formatTagLabel(tag)),
+              //       selected: selected,
+              //       onSelected: (val) {
+              //         setState(() {
+              //           if (val) {
+              //             _selectedDietaryTags.add(tag);
+              //           } else {
+              //             _selectedDietaryTags.remove(tag);
+              //           }
+              //         });
+              //       },
+              //       selectedColor: AppTheme.primaryOrange,
+              //       checkmarkColor: Colors.white,
+              //       labelStyle: TextStyle(
+              //         color: selected ? Colors.white : AppTheme.darkText,
+              //         fontSize: 13,
+              //       ),
+              //     );
+              //   }).toList(),
+              // ),
+              // const SizedBox(height: 20),
 
-              // Allergen Info
-              _buildSectionLabel('Allergen Info'),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _allAllergens.map((allergen) {
-                  final selected = _selectedAllergens.contains(allergen);
-                  return FilterChip(
-                    label: Text(_formatTagLabel(allergen)),
-                    selected: selected,
-                    onSelected: (val) {
-                      setState(() {
-                        if (val) {
-                          _selectedAllergens.add(allergen);
-                        } else {
-                          _selectedAllergens.remove(allergen);
-                        }
-                      });
-                    },
-                    selectedColor: Colors.red.shade400,
-                    checkmarkColor: Colors.white,
-                    labelStyle: TextStyle(
-                      color: selected ? Colors.white : AppTheme.darkText,
-                      fontSize: 13,
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 20),
+              // // Allergen Info
+              // _buildSectionLabel('Allergen Info'),
+              // const SizedBox(height: 8),
+              // Wrap(
+              //   spacing: 8,
+              //   runSpacing: 8,
+              //   children: _allAllergens.map((allergen) {
+              //     final selected = _selectedAllergens.contains(allergen);
+              //     return FilterChip(
+              //       label: Text(_formatTagLabel(allergen)),
+              //       selected: selected,
+              //       onSelected: (val) {
+              //         setState(() {
+              //           if (val) {
+              //             _selectedAllergens.add(allergen);
+              //           } else {
+              //             _selectedAllergens.remove(allergen);
+              //           }
+              //         });
+              //       },
+              //       selectedColor: Colors.red.shade400,
+              //       checkmarkColor: Colors.white,
+              //       labelStyle: TextStyle(
+              //         color: selected ? Colors.white : AppTheme.darkText,
+              //         fontSize: 13,
+              //       ),
+              //     );
+              //   }).toList(),
+              // ),
+              // const SizedBox(height: 20),
 
               // Fulfillment Modes
               _buildSectionLabel('Fulfillment Modes'),

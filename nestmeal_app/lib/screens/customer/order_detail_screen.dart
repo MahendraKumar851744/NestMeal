@@ -8,6 +8,7 @@ import '../../models/order_model.dart';
 import '../../providers/order_provider.dart';
 import '../../providers/review_provider.dart';
 import '../../widgets/status_badge.dart';
+import 'cook_profile_screen.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final String orderId;
@@ -110,9 +111,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           _buildStatusTimeline(order),
           const SizedBox(height: 24),
 
-          // Pickup code
-          if (order.status == 'ready_for_pickup' &&
-              order.fulfillmentType == 'pickup')
+          // Pickup code - show for pickup orders in active states
+          if (order.fulfillmentType == 'pickup' &&
+              order.pickupCode != null &&
+              ['placed', 'accepted', 'preparing', 'ready_for_pickup'].contains(order.status))
             _buildPickupCode(order),
 
           // Order items
@@ -127,10 +129,75 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           _buildPriceBreakdown(order),
           const SizedBox(height: 24),
 
-          // Cook info
+          // Cook info (clickable)
           _buildSectionTitle('Cook'),
           const SizedBox(height: 8),
-          _buildInfoRow(Icons.person, order.cookDisplayName),
+          GestureDetector(
+            onTap: () {
+              if (order.cookId.isNotEmpty) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CookProfileScreen(cookId: order.cookId),
+                  ),
+                );
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor:
+                        const Color(0xFFF97316).withOpacity(0.12),
+                    child: Text(
+                      order.cookDisplayName.isNotEmpty
+                          ? order.cookDisplayName[0].toUpperCase()
+                          : 'C',
+                      style: const TextStyle(
+                        color: Color(0xFFF97316),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          order.cookDisplayName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'View profile & order more',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFFF97316),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right,
+                    color: Color(0xFFF97316),
+                  ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 16),
 
           // Special instructions
@@ -212,7 +279,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         'placed',
         'accepted',
         'preparing',
-        'ready_for_pickup',
         'out_for_delivery',
         'delivered',
         'completed',
@@ -354,10 +420,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   // ───────── Pickup Code ─────────
 
   Widget _buildPickupCode(OrderModel order) {
-    // The pickup code is typically the last 6 chars of the order number
-    final code = order.orderNumber.length >= 6
-        ? order.orderNumber.substring(order.orderNumber.length - 6)
-        : order.orderNumber;
+    final code = order.pickupCode ?? order.orderNumber;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
@@ -473,6 +536,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           children: [
             _priceRow('Item Total', order.subtotal),
             _priceRow('Platform Fee', order.serviceFee),
+            if (order.taxAmount > 0)
+              _priceRow('Tax', order.taxAmount),
             if (order.fulfillmentType == 'delivery')
               _priceRow('Delivery Fee', order.deliveryFee),
             if (order.discountAmount > 0)

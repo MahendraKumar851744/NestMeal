@@ -86,6 +86,8 @@ class Order(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='placed')
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
 
+    acceptance_deadline = models.DateTimeField(null=True, blank=True, help_text='Cook must accept before this time')
+
     cancellation_reason = models.TextField(blank=True)
     cancelled_by = models.CharField(max_length=10, choices=CANCELLED_BY_CHOICES, null=True, blank=True)
 
@@ -101,13 +103,28 @@ class Order(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.order_number:
-            from django.utils import timezone
-            date_str = timezone.now().strftime('%Y%m%d')
-            random_part = ''.join(random.choices(string.digits, k=4))
-            self.order_number = f"HB-{date_str}-{random_part}"
+            self.order_number = self._generate_short_order_number()
         if self.fulfillment_type == 'pickup' and not self.pickup_code:
             self.pickup_code = ''.join(random.choices(string.digits, k=6))
+        # Set acceptance deadline for new orders (2 minutes)
+        if self.status == 'placed' and not self.acceptance_deadline:
+            from django.utils import timezone
+            from datetime import timedelta
+            self.acceptance_deadline = timezone.now() + timedelta(minutes=2)
         super().save(*args, **kwargs)
+
+    @staticmethod
+    def _generate_short_order_number():
+        """Generate a short order number like HB-A1B2 for easy verification."""
+        chars = string.ascii_uppercase + string.digits
+        for _ in range(20):
+            code = ''.join(random.choices(chars, k=4))
+            candidate = f"HB-{code}"
+            if not Order.objects.filter(order_number=candidate).exists():
+                return candidate
+        # Fallback: 6-char code if 4-char space is crowded
+        code = ''.join(random.choices(chars, k=6))
+        return f"HB-{code}"
 
 
 class OrderItem(models.Model):

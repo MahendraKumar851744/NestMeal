@@ -4,8 +4,37 @@ from accounts.models import User, CookProfile
 from orders.models import Order
 
 
+class WalletTransaction(models.Model):
+    """Tracks every credit/debit to a customer's wallet."""
+    TYPE_CHOICES = [
+        ('topup', 'Top Up'),
+        ('payment', 'Payment'),
+        ('refund', 'Refund'),
+        ('cashback', 'Cashback'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='wallet_transactions')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    transaction_type = models.CharField(max_length=15, choices=TYPE_CHOICES)
+    description = models.CharField(max_length=255)
+    balance_after = models.DecimalField(max_digits=10, decimal_places=2)
+    order = models.ForeignKey(Order, on_delete=models.SET_NULL, null=True, blank=True, related_name='wallet_transactions')
+    gateway_transaction_id = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'wallet_transactions'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        sign = '+' if self.amount > 0 else ''
+        return f"Wallet {self.transaction_type}: {sign}{self.amount} for {self.user.full_name}"
+
+
 class Payment(models.Model):
     METHOD_CHOICES = [
+        ('card', 'Card'),
         ('upi', 'UPI'),
         ('credit_card', 'Credit Card'),
         ('debit_card', 'Debit Card'),
@@ -14,6 +43,7 @@ class Payment(models.Model):
     ]
     STATUS_CHOICES = [
         ('initiated', 'Initiated'),
+        ('requires_payment', 'Requires Payment'),
         ('success', 'Success'),
         ('failed', 'Failed'),
         ('refund_initiated', 'Refund Initiated'),
@@ -24,10 +54,12 @@ class Payment(models.Model):
     order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='payment')
     customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payments')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    currency = models.CharField(max_length=3, default='INR')
+    currency = models.CharField(max_length=3, default='AUD')
     method = models.CharField(max_length=15, choices=METHOD_CHOICES)
-    gateway = models.CharField(max_length=50, default='razorpay')
+    gateway = models.CharField(max_length=50, default='stripe')
     gateway_transaction_id = models.CharField(max_length=255, blank=True)
+    stripe_payment_intent_id = models.CharField(max_length=255, blank=True)
+    stripe_client_secret = models.CharField(max_length=255, blank=True)
     gateway_status = models.CharField(max_length=50, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='initiated')
     refund_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

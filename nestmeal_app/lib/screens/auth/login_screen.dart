@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 
 import 'package:nestmeal_app/config/theme.dart';
 import 'package:nestmeal_app/providers/auth_provider.dart';
+import 'package:nestmeal_app/services/api_service.dart';
 import 'package:nestmeal_app/screens/auth/register_screen.dart';
+import 'package:nestmeal_app/screens/auth/otp_verification_screen.dart';
 import 'package:nestmeal_app/screens/customer/customer_shell.dart';
 import 'package:nestmeal_app/screens/cook/cook_shell.dart';
 import 'package:nestmeal_app/screens/admin/admin_dashboard_screen.dart';
@@ -42,12 +44,27 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
+      // If user is not verified, route to OTP screen
+      if (authProvider.currentUser != null &&
+          !authProvider.currentUser!.isVerified) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => OTPVerificationScreen(
+              phone: authProvider.currentUser!.phone,
+            ),
+          ),
+          (route) => false,
+        );
+        return;
+      }
+
       _navigateByRole(authProvider);
     } catch (e) {
       if (!mounted) return;
+      final message = e is ApiException ? e.message : e.toString();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString()),
+          content: Text(message),
           backgroundColor: AppTheme.errorRed,
         ),
       );

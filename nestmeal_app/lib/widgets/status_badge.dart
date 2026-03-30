@@ -54,12 +54,33 @@ class StatusBadge extends StatelessWidget {
   }
 
   String _getLabel() {
-    return status
-        .replaceAll('_', ' ')
-        .split(' ')
-        .map((word) => word.isNotEmpty
-            ? '${word[0].toUpperCase()}${word.substring(1)}'
-            : '')
-        .join(' ');
+    switch (status) {
+      case 'placed':
+        return 'Order Placed';
+      case 'accepted':
+        return 'Accepted';
+      case 'preparing':
+        return 'Preparing';
+      case 'ready_for_pickup':
+        return 'Ready for Pickup';
+      case 'out_for_delivery':
+        return 'Out for Delivery';
+      case 'delivered':
+        return 'Delivered';
+      case 'completed':
+        return 'Completed';
+      case 'cancelled':
+        return 'Cancelled';
+      case 'rejected':
+        return 'Rejected';
+      default:
+        return status
+            .replaceAll('_', ' ')
+            .split(' ')
+            .map((word) => word.isNotEmpty
+                ? '${word[0].toUpperCase()}${word.substring(1)}'
+                : '')
+            .join(' ');
+    }
   }
 }

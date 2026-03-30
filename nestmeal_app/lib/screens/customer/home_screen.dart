@@ -7,11 +7,12 @@ import '../../models/meal_model.dart';
 import '../../models/helpers.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/meal_provider.dart';
+import '../../models/story_model.dart';
+import '../../providers/story_provider.dart';
 import '../../providers/cook_provider.dart';
 import 'meal_detail_screen.dart';
-import 'cook_profile_screen.dart';
-import 'all_cooks_screen.dart';
 import 'search_screen.dart';
+import 'story_viewer_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -32,14 +33,22 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  String _getTodayDayCode() {
+    const dayCodes = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+    return dayCodes[DateTime.now().weekday - 1];
+  }
+
   Future<void> _loadData() async {
     final mealProvider = context.read<MealProvider>();
+    final storyProvider = context.read<StoryProvider>();
     final cookProvider = context.read<CookProvider>();
+    final today = _getTodayDayCode();
     try {
       await Future.wait([
-        mealProvider.fetchMeals(),
+        mealProvider.fetchMeals(availableDays: today),
         mealProvider.fetchFeaturedMeals(),
-        cookProvider.fetchCooks(ordering: '-avg_rating'),
+        storyProvider.fetchStoryFeed(),
+        cookProvider.fetchFollowing(),
       ]);
     } catch (_) {}
   }
@@ -62,8 +71,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final mealProvider = context.watch<MealProvider>();
-    final firstName =
-        authProvider.currentUser?.fullName.split(' ').first ?? 'there';
+    final storyProvider = context.watch<StoryProvider>();
+    // firstName used in greeting if needed
+
 
     return Scaffold(
       backgroundColor: AppTheme.warmCream,
@@ -81,22 +91,46 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Greeting
-                      Text(
-                        '${_getGreeting()} \u{1F37D}',
-                        style: GoogleFonts.playfairDisplay(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.darkText,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _getMealTimeQuestion(),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: AppTheme.greyText,
-                        ),
+                      // Greeting + Avatar row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${_getGreeting()} \u{1F37D}',
+                                  style: GoogleFonts.playfairDisplay(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.darkText,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _getMealTimeQuestion(),
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: AppTheme.greyText,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          CircleAvatar(
+                            radius: 22,
+                            backgroundColor: AppTheme.primaryOrange.withValues(alpha: 0.15),
+                            child: Text(
+                              (authProvider.currentUser?.fullName ?? 'U')[0].toUpperCase(),
+                              style: GoogleFonts.playfairDisplay(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.primaryOrange,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 20),
 
@@ -182,6 +216,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
+            // Stories bar
+            if (storyProvider.storyFeed.isNotEmpty)
+              SliverToBoxAdapter(
+                child: _StoryBar(storyGroups: storyProvider.storyFeed),
+              ),
+
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
             // Today's Fresh Meals
@@ -197,55 +237,43 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 16)),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 280,
-                child: mealProvider.isLoading && mealProvider.meals.isEmpty
-                    ? _buildShimmerList()
-                    : mealProvider.meals.isEmpty
-                        ? const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(20),
-                              child: Text(
-                                'No meals available right now',
-                                style: TextStyle(color: AppTheme.greyText),
-                              ),
-                            ),
-                          )
-                        : ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: mealProvider.meals.length,
-                            itemBuilder: (context, index) {
-                              return _MealCard(
-                                meal: mealProvider.meals[index],
-                              );
-                            },
-                          ),
+            if (mealProvider.isLoading && mealProvider.meals.isEmpty)
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 280,
+                  child: _buildShimmerList(),
+                ),
+              )
+            else if (mealProvider.meals.isEmpty)
+              const SliverToBoxAdapter(
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Text(
+                      'No meals available right now',
+                      style: TextStyle(color: AppTheme.greyText),
+                    ),
+                  ),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.68,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      return _MealCard(meal: mealProvider.meals[index]);
+                    },
+                    childCount: mealProvider.meals.length,
+                  ),
+                ),
               ),
-            ),
-
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
-
-            // Featured Local Cooks
-            SliverToBoxAdapter(
-              child: _SectionHeader(
-                title: 'Featured Local Cooks',
-                onSeeAll: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const AllCooksScreen()),
-                  );
-                },
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 140,
-                child: _buildFeaturedCooks(),
-              ),
-            ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
@@ -386,158 +414,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCookShimmerList() {
-    return ListView.builder(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: 5,
-      itemBuilder: (context, index) {
-        return Padding(
-          padding: const EdgeInsets.only(right: 16),
-          child: Column(
-            children: [
-              CircleAvatar(
-                radius: 35,
-                backgroundColor: AppTheme.lightGrey.withValues(alpha: 0.5),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                height: 12,
-                width: 60,
-                decoration: BoxDecoration(
-                  color: AppTheme.lightGrey.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildFeaturedCooks() {
-    final cookProvider = context.watch<CookProvider>();
-
-    if (cookProvider.isLoading && cookProvider.cooks.isEmpty) {
-      return _buildCookShimmerList();
-    }
-
-    if (cookProvider.cooks.isEmpty) {
-      return const Center(
-        child: Text(
-          'No cooks available yet',
-          style: TextStyle(color: AppTheme.greyText),
-        ),
-      );
-    }
-
-    return ListView.builder(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: cookProvider.cooks.length.clamp(0, 10),
-      itemBuilder: (context, index) {
-        final cook = cookProvider.cooks[index];
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => CookProfileScreen(cookId: cook.id),
-              ),
-            );
-          },
-          child: Container(
-            width: 110,
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor:
-                      AppTheme.primaryOrange.withValues(alpha: 0.12),
-                  child: Text(
-                    cook.displayName.isNotEmpty
-                        ? cook.displayName[0].toUpperCase()
-                        : 'C',
-                    style: GoogleFonts.playfairDisplay(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.primaryOrange,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: 94,
-                  child: Text(
-                    cook.displayName,
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.darkText,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                if (cook.kitchenCity.isNotEmpty)
-                  Text(
-                    cook.kitchenCity,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: AppTheme.greyText,
-                    ),
-                  ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.star,
-                        size: 12, color: AppTheme.primaryOrange),
-                    const SizedBox(width: 2),
-                    Text(
-                      cook.avgRating > 0
-                          ? cook.avgRating.toStringAsFixed(1)
-                          : 'New',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.greyText,
-                      ),
-                    ),
-                    if (cook.deliveryEnabled) ...[
-                      const SizedBox(width: 6),
-                      const Icon(Icons.delivery_dining,
-                          size: 12, color: AppTheme.successGreen),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   Widget _buildTrendingShimmer() {
     return Column(
       children: List.generate(3, (index) {
@@ -587,6 +463,119 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
       }),
+    );
+  }
+}
+
+// ─── Story Bar ──────────────────────────────────────────────────────────────
+
+class _StoryBar extends StatelessWidget {
+  final List<CookStoryGroup> storyGroups;
+
+  const _StoryBar({required this.storyGroups});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 20),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Text(
+            'Stories',
+            style: GoogleFonts.playfairDisplay(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.darkText,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 100,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: storyGroups.length,
+            itemBuilder: (context, index) {
+              final group = storyGroups[index];
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => StoryViewerScreen(
+                        storyGroups: storyGroups,
+                        initialGroupIndex: index,
+                      ),
+                    ),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 14),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [
+                              AppTheme.primaryOrange,
+                              Colors.deepOrange.shade700,
+                              Colors.orange.shade400,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppTheme.warmCream,
+                          ),
+                          child: CircleAvatar(
+                            radius: 30,
+                            backgroundColor:
+                                AppTheme.primaryOrange.withValues(alpha: 0.12),
+                            child: Text(
+                              group.cookDisplayName.isNotEmpty
+                                  ? group.cookDisplayName[0].toUpperCase()
+                                  : 'C',
+                              style: GoogleFonts.playfairDisplay(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.primaryOrange,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        width: 72,
+                        child: Text(
+                          group.cookDisplayName,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.darkText,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
@@ -691,8 +680,6 @@ class _MealCard extends StatelessWidget {
         );
       },
       child: Container(
-        width: 200,
-        margin: const EdgeInsets.only(right: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -757,24 +744,66 @@ class _MealCard extends StatelessWidget {
                 Positioned(
                   top: 8,
                   left: 8,
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (meal.fulfillmentModes.contains('pickup'))
-                        _Badge(
-                          label: 'Pickup',
-                          color: AppTheme.primaryOrange,
-                        ),
-                      if (meal.fulfillmentModes.contains('delivery'))
+                      Row(
+                        children: [
+                          if (meal.fulfillmentModes.contains('pickup'))
+                            _Badge(
+                              label: 'Pickup',
+                              color: AppTheme.primaryOrange,
+                            ),
+                          if (meal.fulfillmentModes.contains('delivery'))
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: _Badge(
+                                label: 'Delivery',
+                                color: AppTheme.primaryOrange,
+                              ),
+                            ),
+                        ],
+                      ),
+                      if (_isNewMeal(meal.createdAt))
                         Padding(
-                          padding: const EdgeInsets.only(left: 4),
-                          child: _Badge(
-                            label: 'Delivery',
-                            color: AppTheme.primaryOrange,
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(6),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.15),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                            child: const Text(
+                              'NEW',
+                              style: TextStyle(
+                                color: AppTheme.primaryOrange,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
                         ),
                     ],
                   ),
                 ),
+                // Discount badge
+                if (meal.discountPercentage > 0)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: _Badge(
+                      label: '${meal.discountPercentage.toStringAsFixed(0)}% OFF',
+                      color: AppTheme.successGreen,
+                    ),
+                  ),
               ],
             ),
 
@@ -796,24 +825,40 @@ class _MealCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      'by ${meal.cookDisplayName}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.greyText,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'by ${meal.cookDisplayName}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.greyText,
+                            ),
+                          ),
+                        ),
+                        if (meal.category.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryOrange
+                                  .withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              meal.category[0].toUpperCase() +
+                                  meal.category.substring(1),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.primaryOrange,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                    if (meal.shortDescription.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        meal.shortDescription,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 11, color: AppTheme.greyText),
-                      ),
-                    ],
                     const Spacer(),
                     Row(
                       children: [
@@ -860,6 +905,18 @@ class _MealCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+bool _isNewMeal(String createdAt) {
+  if (createdAt.isEmpty) return false;
+  try {
+    final created = DateTime.parse(createdAt);
+    return DateTime.now().difference(created).inDays <= 7;
+  } catch (_) {
+    return false;
   }
 }
 
@@ -965,32 +1022,79 @@ class _TrendingMealRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    meal.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          meal.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      if (_isNewMeal(meal.createdAt)) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                                color: AppTheme.primaryOrange, width: 1),
+                          ),
+                          child: const Text(
+                            'NEW',
+                            style: TextStyle(
+                              color: AppTheme.primaryOrange,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    'by ${meal.cookDisplayName}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.greyText,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          'by ${meal.cookDisplayName}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.greyText,
+                          ),
+                        ),
+                      ),
+                      if (meal.category.isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryOrange
+                                .withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            meal.category[0].toUpperCase() +
+                                meal.category.substring(1),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.primaryOrange,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                  if (meal.shortDescription.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      meal.shortDescription,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 11, color: AppTheme.greyText),
-                    ),
-                  ],
                   const SizedBox(height: 6),
                   Row(
                     children: [
@@ -1022,7 +1126,23 @@ class _TrendingMealRow extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                if (meal.discountPercentage > 0)
+                if (meal.discountPercentage > 0) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.successGreen,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      '${meal.discountPercentage.toStringAsFixed(0)}% OFF',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
                   Text(
                     '${currencySymbol(meal.currency)}${meal.price.toStringAsFixed(2)}',
                     style: const TextStyle(
@@ -1031,6 +1151,7 @@ class _TrendingMealRow extends StatelessWidget {
                       decoration: TextDecoration.lineThrough,
                     ),
                   ),
+                ],
                 Text(
                   '${currencySymbol(meal.currency)}${meal.effectivePrice.toStringAsFixed(2)}',
                   style: const TextStyle(

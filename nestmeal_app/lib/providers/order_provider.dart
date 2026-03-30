@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../config/api_config.dart';
 import '../models/order_model.dart';
-import '../models/order_list_item.dart';
 import '../services/api_service.dart';
 
 class OrderProvider extends ChangeNotifier {
@@ -11,6 +10,16 @@ class OrderProvider extends ChangeNotifier {
   bool isLoading = false;
   String? error;
   Map<String, dynamic>? cookStats;
+
+  // Tracks order status changes the user hasn't seen yet
+  int _unreadUpdates = 0;
+  int get unreadUpdates => _unreadUpdates;
+  Set<String> _knownStatuses = {};
+
+  void clearUnreadUpdates() {
+    _unreadUpdates = 0;
+    notifyListeners();
+  }
 
   final ApiService _apiService;
 
@@ -50,8 +59,21 @@ class OrderProvider extends ChangeNotifier {
 
       final response = await _apiService.get(url);
       final results = response is List ? response : (response['results'] as List);
-      orders =
+      final newOrders =
           results.map((json) => OrderListItem.fromJson(json)).toList();
+
+      // Detect status changes to show notification badge
+      if (_knownStatuses.isNotEmpty) {
+        for (final order in newOrders) {
+          final key = '${order.id}:${order.status}';
+          if (!_knownStatuses.contains(key)) {
+            _unreadUpdates++;
+          }
+        }
+      }
+      // Update known statuses
+      _knownStatuses = newOrders.map((o) => '${o.id}:${o.status}').toSet();
+      orders = newOrders;
     } catch (e) {
       error = e.toString();
       rethrow;
@@ -184,7 +206,7 @@ class OrderProvider extends ChangeNotifier {
     try {
       final response = await _apiService.post(
         '${ApiConfig.ordersUrl}/$id/cancel/',
-        {'reason': reason},
+        {'cancellation_reason': reason},
       );
       selectedOrder = OrderModel.fromJson(response);
     } catch (e) {

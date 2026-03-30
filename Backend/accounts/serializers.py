@@ -1,3 +1,5 @@
+import re
+
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
@@ -9,6 +11,8 @@ from .models import (
     PickupLocation,
     Address,
     AdminProfile,
+    Follow,
+    PhoneOTP,
 )
 
 
@@ -73,12 +77,14 @@ class CookProfileSerializer(serializers.ModelSerializer):
     pickup_locations = PickupLocationSerializer(many=True, read_only=True)
     user_email = serializers.EmailField(source='user.email', read_only=True)
     full_name = serializers.CharField(source='user.full_name', read_only=True)
+    followers_count = serializers.IntegerField(read_only=True, default=0)
+    is_followed = serializers.BooleanField(read_only=True, default=False)
 
     class Meta:
         model = CookProfile
         fields = [
             'id', 'user', 'user_email', 'full_name',
-            'display_name', 'bio',
+            'display_name', 'bio', 'is_available',
             'kitchen_street', 'kitchen_city', 'kitchen_state', 'kitchen_zip',
             'kitchen_latitude', 'kitchen_longitude',
             'pickup_instructions', 'pickup_locations',
@@ -87,10 +93,12 @@ class CookProfileSerializer(serializers.ModelSerializer):
             'food_safety_certificate_url', 'government_id',
             'bank_account_number', 'bank_ifsc', 'bank_account_holder',
             'commission_rate', 'avg_rating', 'total_reviews',
+            'followers_count', 'is_followed',
             'is_active', 'status', 'created_at', 'updated_at',
         ]
         read_only_fields = [
             'id', 'user', 'commission_rate', 'avg_rating', 'total_reviews',
+            'followers_count', 'is_followed',
             'created_at', 'updated_at',
         ]
 
@@ -164,6 +172,22 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             'display_name', 'kitchen_street', 'kitchen_city',
             'kitchen_state', 'kitchen_zip',
         ]
+
+    @staticmethod
+    def _strip_html(value):
+        """Remove HTML/script tags from a string to prevent stored XSS."""
+        return re.sub(r'<[^>]+>', '', value).strip()
+
+    def validate_full_name(self, value):
+        sanitized = self._strip_html(value)
+        if not sanitized:
+            raise serializers.ValidationError('Full name is required.')
+        return sanitized
+
+    def validate_display_name(self, value):
+        if value:
+            return self._strip_html(value)
+        return value
 
     def validate(self, attrs):
         if attrs['password'] != attrs.pop('password_confirm'):
@@ -258,3 +282,22 @@ class ChangePasswordSerializer(serializers.Serializer):
         user.set_password(self.validated_data['new_password'])
         user.save(update_fields=['password'])
         return user
+
+
+# ---------------------------------------------------------------------------
+# OTP
+# ---------------------------------------------------------------------------
+
+class SendOTPSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=20)
+
+    def validate_phone(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError('Phone number is required.')
+        return value
+
+
+class VerifyOTPSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=20)
+    otp = serializers.CharField(max_length=6)

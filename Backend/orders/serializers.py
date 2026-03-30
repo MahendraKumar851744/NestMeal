@@ -51,6 +51,7 @@ class OrderSerializer(serializers.ModelSerializer):
             'coupon_code', 'special_instructions',
             'status', 'payment_status',
             'cancellation_reason', 'cancelled_by',
+            'acceptance_deadline',
             'created_at', 'updated_at',
             # Nested
             'items',
@@ -66,6 +67,7 @@ class OrderListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'order_number', 'status', 'total_amount',
             'fulfillment_type', 'created_at', 'cook_display_name',
+            'pickup_code', 'acceptance_deadline',
         ]
         read_only_fields = fields
 
@@ -325,7 +327,7 @@ class OrderCreateSerializer(serializers.Serializer):
 # ---------------------------------------------------------------------------
 
 ALLOWED_STATUS_TRANSITIONS_PICKUP = {
-    'placed': ['accepted', 'rejected', 'cancelled'],
+    'placed': ['accepted', 'preparing', 'rejected', 'cancelled'],
     'accepted': ['preparing', 'cancelled'],
     'preparing': ['ready_for_pickup'],
     'ready_for_pickup': ['picked_up'],
@@ -333,10 +335,9 @@ ALLOWED_STATUS_TRANSITIONS_PICKUP = {
 }
 
 ALLOWED_STATUS_TRANSITIONS_DELIVERY = {
-    'placed': ['accepted', 'rejected', 'cancelled'],
+    'placed': ['accepted', 'preparing', 'rejected', 'cancelled'],
     'accepted': ['preparing', 'cancelled'],
-    'preparing': ['ready_for_pickup'],
-    'ready_for_pickup': ['out_for_delivery'],
+    'preparing': ['out_for_delivery'],
     'out_for_delivery': ['delivered'],
     'delivered': ['completed'],
 }

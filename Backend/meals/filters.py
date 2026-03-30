@@ -38,28 +38,23 @@ class MealFilter(django_filters.FilterSet):
         ]
 
     # -- custom filter methods ------------------------------------------------
+    # SQLite does not support __contains on JSONFields, so we use
+    # case-insensitive LIKE on the raw JSON text (e.g. '%"sat"%').
 
     def filter_dietary_tags(self, queryset, name, value):
-        """
-        Accept a comma-separated string (e.g. ``gluten_free,vegan``) and
-        return meals whose ``dietary_tags`` JSON array contains **all** of
-        the requested tags.
-        """
         tags = [t.strip() for t in value.split(',') if t.strip()]
         for tag in tags:
-            queryset = queryset.filter(dietary_tags__contains=[tag])
+            queryset = queryset.filter(dietary_tags__icontains=f'"{tag}"')
         return queryset
 
     def filter_fulfillment_modes(self, queryset, name, value):
-        """Filter meals that support the given fulfillment mode(s)."""
         modes = [m.strip() for m in value.split(',') if m.strip()]
         for mode in modes:
-            queryset = queryset.filter(fulfillment_modes__contains=[mode])
+            queryset = queryset.filter(fulfillment_modes__icontains=f'"{mode}"')
         return queryset
 
     def filter_available_days(self, queryset, name, value):
-        """Filter meals available on the given day(s) (e.g. ``mon,tue``)."""
         days = [d.strip() for d in value.split(',') if d.strip()]
         for day in days:
-            queryset = queryset.filter(available_days__contains=[day])
+            queryset = queryset.filter(available_days__icontains=f'"{day}"')
         return queryset

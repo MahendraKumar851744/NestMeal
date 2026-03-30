@@ -11,7 +11,8 @@ class PaymentSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'order', 'order_number', 'customer', 'customer_name',
             'amount', 'currency', 'method', 'gateway',
-            'gateway_transaction_id', 'gateway_status', 'status',
+            'gateway_transaction_id', 'stripe_payment_intent_id',
+            'gateway_status', 'status',
             'refund_amount', 'refund_reason', 'refund_initiated_at',
             'paid_at', 'created_at',
         ]
@@ -20,8 +21,17 @@ class PaymentSerializer(serializers.ModelSerializer):
 
 class PaymentCreateSerializer(serializers.Serializer):
     order_id = serializers.UUIDField()
-    method = serializers.ChoiceField(choices=Payment.METHOD_CHOICES)
-    gateway = serializers.CharField(max_length=50, default='razorpay')
+    method = serializers.ChoiceField(choices=Payment.METHOD_CHOICES, default='card')
+    gateway = serializers.CharField(max_length=50, default='stripe')
+
+
+class PaymentIntentResponseSerializer(serializers.Serializer):
+    payment_id = serializers.UUIDField()
+    client_secret = serializers.CharField()
+    stripe_payment_intent_id = serializers.CharField()
+    publishable_key = serializers.CharField()
+    amount = serializers.FloatField()
+    currency = serializers.CharField()
 
     def validate_order_id(self, value):
         from orders.models import Order

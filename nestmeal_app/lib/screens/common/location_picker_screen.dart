@@ -62,6 +62,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   bool _isLoadingAddress = false;
   bool _isLoadingLocation = false;
   Timer? _debounce;
+  Timer? _searchDebounce;
+  List<_AddressSuggestion> _suggestions = [];
+  bool _showSuggestions = false;
 
   @override
   void initState() {
@@ -77,6 +80,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _searchDebounce?.cancel();
     _searchController.dispose();
     _mapController?.dispose();
     super.dispose();
@@ -222,6 +226,91 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     }
   }
 
+  // ── Autocomplete suggestions ──────────────────────────────────────────
+
+  void _onSearchChanged(String query) {
+    _searchDebounce?.cancel();
+    if (query.trim().length < 3) {
+      setState(() {
+        _suggestions = [];
+        _showSuggestions = false;
+      });
+      return;
+    }
+    _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+      _fetchSuggestions(query.trim());
+    });
+  }
+
+  Future<void> _fetchSuggestions(String query) async {
+    try {
+      // Bias towards Australia
+      final locations = await locationFromAddress('$query, Australia');
+      if (!mounted) return;
+
+      final results = <_AddressSuggestion>[];
+      for (final loc in locations.take(5)) {
+        try {
+          final placemarks = await placemarkFromCoordinates(
+            loc.latitude,
+            loc.longitude,
+          );
+          if (placemarks.isNotEmpty) {
+            final p = placemarks.first;
+            final street = [p.street, p.subLocality, p.thoroughfare]
+                .where((s) => s != null && s.isNotEmpty)
+                .join(', ');
+            final city = p.locality ?? p.subAdministrativeArea ?? '';
+            final state = p.administrativeArea ?? '';
+            final zip = p.postalCode ?? '';
+            final address = [street, city, state, zip]
+                .where((s) => s.isNotEmpty)
+                .join(', ');
+
+            results.add(_AddressSuggestion(
+              address: address,
+              street: street,
+              city: city,
+              state: state,
+              zipCode: zip,
+              latLng: LatLng(loc.latitude, loc.longitude),
+            ));
+          }
+        } catch (_) {}
+      }
+
+      if (mounted) {
+        setState(() {
+          _suggestions = results;
+          _showSuggestions = results.isNotEmpty;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _suggestions = [];
+          _showSuggestions = false;
+        });
+      }
+    }
+  }
+
+  void _selectSuggestion(_AddressSuggestion suggestion) {
+    _searchController.text = suggestion.address;
+    setState(() {
+      _showSuggestions = false;
+      _suggestions = [];
+    });
+    _animateTo(suggestion.latLng);
+    setState(() {
+      _street = suggestion.street;
+      _city = suggestion.city;
+      _state = suggestion.state;
+      _zipCode = suggestion.zipCode;
+      _addressLine = suggestion.address;
+    });
+  }
+
   // ── Confirm ──────────────────────────────────────────────────────────
 
   void _confirmLocation() {
@@ -297,15 +386,27 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                       child: TextField(
                         controller: _searchController,
                         textInputAction: TextInputAction.search,
-                        onSubmitted: (_) => _searchAddress(),
+                        onSubmitted: (_) {
+                          setState(() => _showSuggestions = false);
+                          _searchAddress();
+                        },
+                        onChanged: _onSearchChanged,
                         decoration: InputDecoration(
                           hintText: 'Search address...',
                           hintStyle: const TextStyle(fontSize: 14),
                           prefixIcon: const Icon(Icons.search, size: 20),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.send, size: 18),
-                            onPressed: _searchAddress,
-                          ),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.close, size: 18),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() {
+                                      _suggestions = [];
+                                      _showSuggestions = false;
+                                    });
+                                  },
+                                )
+                              : null,
                           filled: true,
                           fillColor: Colors.white,
                           contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
@@ -321,6 +422,47 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               ),
             ),
           ),
+
+          // Autocomplete suggestions dropdown
+          if (_showSuggestions && _suggestions.isNotEmpty)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 60,
+              left: 60,
+              right: 12,
+              child: Material(
+                elevation: 4,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  constraints: const BoxConstraints(maxHeight: 250),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    itemCount: _suggestions.length,
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1, indent: 44),
+                    itemBuilder: (context, index) {
+                      final s = _suggestions[index];
+                      return ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.location_on_outlined,
+                            size: 20, color: AppTheme.primaryOrange),
+                        title: Text(
+                          s.address,
+                          style: const TextStyle(fontSize: 13),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        onTap: () => _selectSuggestion(s),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
 
           // My Location FAB
           Positioned(
@@ -443,4 +585,22 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       ),
     );
   }
+}
+
+class _AddressSuggestion {
+  final String address;
+  final String street;
+  final String city;
+  final String state;
+  final String zipCode;
+  final LatLng latLng;
+
+  const _AddressSuggestion({
+    required this.address,
+    required this.street,
+    required this.city,
+    required this.state,
+    required this.zipCode,
+    required this.latLng,
+  });
 }

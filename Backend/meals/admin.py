@@ -1,11 +1,16 @@
 from django.contrib import admin
-from .models import Meal, MealImage, PickupSlot, RecurringSlotTemplate
+from .models import Meal, MealExtra, MealImage, PickupSlot, RecurringSlotTemplate
 
 
 class MealImageInline(admin.TabularInline):
     model = MealImage
     extra = 0
-    fields = ['image_url', 'display_order']
+    fields = ['image', 'display_order']  
+    
+class MealExtraInline(admin.TabularInline):
+    model = MealExtra
+    extra = 0
+    fields = ['name', 'price', 'is_available', 'display_order']
 
 
 @admin.register(Meal)
@@ -25,7 +30,7 @@ class MealAdmin(admin.ModelAdmin):
         'cook__display_name', 'cook__user__email',
     ]
     readonly_fields = ['id', 'total_orders', 'avg_rating', 'created_at', 'updated_at']
-    inlines = [MealImageInline]
+    inlines = [MealImageInline, MealExtraInline]
     list_per_page = 25
 
 

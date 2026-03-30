@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     AvailableNowView,
     FeaturedMealsView,
+    MealExtraViewSet,
     MealImageViewSet,
     MealViewSet,
     PickupSlotViewSet,
@@ -19,6 +20,23 @@ urlpatterns = [
     # Featured & Available-now (before router so they don't clash with {pk})
     path('meals/featured/', FeaturedMealsView.as_view(), name='meal-featured'),
     path('meals/available-now/', AvailableNowView.as_view(), name='meal-available-now'),
+
+    # Nested meal extras
+    path(
+        'meals/<uuid:meal_pk>/extras/',
+        MealExtraViewSet.as_view({'get': 'list', 'post': 'create'}),
+        name='meal-extra-list',
+    ),
+    path(
+        'meals/<uuid:meal_pk>/extras/<uuid:pk>/',
+        MealExtraViewSet.as_view({
+            'get': 'retrieve',
+            'put': 'update',
+            'patch': 'partial_update',
+            'delete': 'destroy',
+        }),
+        name='meal-extra-detail',
+    ),
 
     # Nested meal images
     path(

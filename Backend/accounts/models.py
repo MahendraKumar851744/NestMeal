@@ -113,7 +113,12 @@ class CookProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='cook_profile')
     display_name = models.CharField(max_length=255)
     bio = models.TextField(max_length=500, blank=True)
-
+    
+    is_available = models.BooleanField(
+        default=True, 
+        help_text="Allows the cook to manually toggle their visibility to customers."
+    )
+    
     kitchen_street = models.CharField(max_length=255)
     kitchen_city = models.CharField(max_length=100)
     kitchen_state = models.CharField(max_length=100)
@@ -168,6 +173,46 @@ class PickupLocation(models.Model):
 
     def __str__(self):
         return f"{self.label} - {self.cook.display_name}"
+
+
+class Follow(models.Model):
+    """A customer follows a cook."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='following')
+    cook = models.ForeignKey(CookProfile, on_delete=models.CASCADE, related_name='followers')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'follows'
+        unique_together = ('customer', 'cook')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.customer.full_name} follows {self.cook.display_name}"
+
+
+class PhoneOTP(models.Model):
+    """Stores OTP codes for phone number verification."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    phone = models.CharField(max_length=20)
+    otp_code = models.CharField(max_length=6)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='otps', null=True, blank=True)
+    is_verified = models.BooleanField(default=False)
+    attempts = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    class Meta:
+        db_table = 'phone_otps'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"OTP for {self.phone} ({'verified' if self.is_verified else 'pending'})"
+
+    @property
+    def is_expired(self):
+        from django.utils import timezone
+        return timezone.now() > self.expires_at
 
 
 class AdminProfile(models.Model):

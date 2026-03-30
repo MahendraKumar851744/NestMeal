@@ -1,0 +1,72 @@
+from django.utils import timezone
+from rest_framework import generics, status
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
+
+from accounts.models import Follow
+from accounts.permissions import IsCook, IsCustomer
+from .models import Story
+from .serializers import StorySerializer, StoryCreateSerializer
+
+
+def _active_stories_qs():
+    """Base queryset for non-expired, active stories."""
+    return (
+        Story.objects
+        .select_related('cook')
+        .filter(is_active=True, expires_at__gt=timezone.now())
+    )
+
+
+class StoryFeedView(generics.ListAPIView):
+    """GET /stories/feed/ -- active stories from cooks the customer follows,
+    ordered by cook then recency."""
+
+    serializer_class = StorySerializer
+    permission_classes = [IsAuthenticated, IsCustomer]
+
+    def get_queryset(self):
+        followed_cook_ids = Follow.objects.filter(
+            customer=self.request.user
+        ).values_list('cook_id', flat=True)
+        return _active_stories_qs().filter(cook_id__in=followed_cook_ids)
+
+
+class CookStoriesView(generics.ListAPIView):
+    """GET /stories/cook/<id>/ -- active stories for a specific cook (public)."""
+
+    serializer_class = StorySerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        cook_id = self.kwargs['cook_id']
+        return _active_stories_qs().filter(cook_id=cook_id)
+
+
+class StoryCreateView(generics.CreateAPIView):
+    """POST /stories/ -- cook uploads a new story (image + optional caption)."""
+
+    serializer_class = StoryCreateSerializer
+    permission_classes = [IsAuthenticated, IsCook]
+    parser_classes = [MultiPartParser, FormParser]
+
+
+class StoryDeleteView(generics.DestroyAPIView):
+    """DELETE /stories/<id>/ -- cook deletes own story."""
+
+    serializer_class = StorySerializer
+    permission_classes = [IsAuthenticated, IsCook]
+
+    def get_queryset(self):
+        return Story.objects.filter(cook=self.request.user.cook_profile)
+
+
+class MyStoriesView(generics.ListAPIView):
+    """GET /stories/my/ -- cook's own active stories."""
+
+    serializer_class = StorySerializer
+    permission_classes = [IsAuthenticated, IsCook]
+
+    def get_queryset(self):
+        return _active_stories_qs().filter(cook=self.request.user.cook_profile)

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'providers/admin_provider.dart';
 
 import 'config/theme.dart';
 import 'services/auth_service.dart';
 import 'services/api_service.dart';
+import 'services/stripe_service.dart' as stripe_svc;
 import 'providers/auth_provider.dart';
 import 'providers/meal_provider.dart';
 import 'providers/order_provider.dart';
@@ -15,12 +17,18 @@ import 'providers/notification_provider.dart';
 import 'providers/payment_provider.dart';
 import 'providers/address_provider.dart';
 import 'providers/cook_provider.dart';
+import 'providers/story_provider.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/auth/otp_verification_screen.dart';
 import 'screens/customer/customer_shell.dart';
 import 'screens/cook/cook_shell.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  stripe_svc.initializeStripe(
+    'pk_test_51TFuhvDjhz5B3fVQVenaO1KM7WaHnrQPOqNLdJCFXHfXFKRjXyPAAQfTHB79pw3pnH1Tnt0t3vgm4dGh1ug7xSlC00lXh9La8M',
+  );
   runApp(const NestMealApp());
 }
 
@@ -66,6 +74,12 @@ class NestMealApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => CookProvider(apiService),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => StoryProvider(apiService),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => AdminProvider(apiService),
         ),
       ],
       child: MaterialApp(
@@ -152,6 +166,11 @@ class _SplashWrapperState extends State<SplashWrapper> {
 
     if (!auth.isLoggedIn) {
       return const LoginScreen();
+    }
+
+    // If logged in but not verified, route to OTP verification
+    if (!auth.currentUser!.isVerified) {
+      return OTPVerificationScreen(phone: auth.currentUser!.phone);
     }
 
     switch (auth.currentUser!.role) {

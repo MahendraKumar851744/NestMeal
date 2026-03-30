@@ -209,6 +209,27 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  // Pickup Location CRUD
+  Future<void> addPickupLocation(Map<String, dynamic> data) async {
+    try {
+      await _apiService.post('${ApiConfig.pickupLocationsUrl}/', data);
+      await fetchProfile();
+    } catch (e) {
+      error = e.toString();
+      rethrow;
+    }
+  }
+
+  Future<void> deletePickupLocation(String locationId) async {
+    try {
+      await _apiService.delete('${ApiConfig.pickupLocationsUrl}/$locationId/');
+      await fetchProfile();
+    } catch (e) {
+      error = e.toString();
+      rethrow;
+    }
+  }
+
   Future<void> changePassword(
     String oldPassword,
     String newPassword,
@@ -234,6 +255,58 @@ class AuthProvider extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
     }
+  }
+
+  // ── OTP methods ──────────────────────────────────────────────────
+
+  Future<void> sendOTP(String phone) async {
+    isLoading = true;
+    error = null;
+    _safeNotify();
+
+    try {
+      await _apiService.post(
+        '${ApiConfig.accountsUrl}/otp/send/',
+        {'phone': phone},
+        requiresAuth: false,
+      );
+    } catch (e) {
+      error = e.toString();
+      rethrow;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> verifyOTP(String phone, String otp) async {
+    isLoading = true;
+    error = null;
+    _safeNotify();
+
+    try {
+      final response = await _apiService.post(
+        '${ApiConfig.accountsUrl}/otp/verify/',
+        {'phone': phone, 'otp': otp},
+        requiresAuth: false,
+      );
+      final verified = response['verified'] == true;
+      if (verified && currentUser != null) {
+        // Refresh user to get updated is_verified flag
+        await fetchProfile();
+      }
+      return verified;
+    } catch (e) {
+      error = e.toString();
+      rethrow;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> resendOTP(String phone) async {
+    await sendOTP(phone);
   }
 
   Future<void> tryAutoLogin() async {

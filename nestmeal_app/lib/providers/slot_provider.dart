@@ -30,8 +30,9 @@ class SlotProvider extends ChangeNotifier {
 
     try {
       final queryParams = <String, String>{};
-      if (cookId != null) queryParams['cook_id'] = cookId;
+      if (cookId != null) queryParams['cook'] = cookId;
       if (date != null) queryParams['date'] = date;
+      queryParams['is_available'] = 'true';
 
       final queryString = queryParams.entries
           .map((e) =>
@@ -65,8 +66,9 @@ class SlotProvider extends ChangeNotifier {
 
     try {
       final queryParams = <String, String>{};
-      if (cookId != null) queryParams['cook_id'] = cookId;
+      if (cookId != null) queryParams['cook'] = cookId;
       if (date != null) queryParams['date'] = date;
+      queryParams['is_available'] = 'true';
 
       final queryString = queryParams.entries
           .map((e) =>
@@ -81,6 +83,38 @@ class SlotProvider extends ChangeNotifier {
       final results = response is List ? response : response['results'] as List;
       deliverySlots =
           results.map((json) => DeliverySlotModel.fromJson(json)).toList();
+    } catch (e) {
+      error = e.toString();
+      rethrow;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> createSlot({
+    required String slotType,
+    required String cookId,
+    required String date,
+    required String startTime,
+    required String endTime,
+    required int maxOrders,
+  }) async {
+    isLoading = true;
+    error = null;
+    _safeNotify();
+
+    try {
+      final url = slotType == 'pickup'
+          ? '${ApiConfig.pickupSlotsUrl}/'
+          : '${ApiConfig.deliverySlotsUrl}/';
+
+      await _apiService.post(url, {
+        'date': date,
+        'start_time': startTime,
+        'end_time': endTime,
+        'max_orders': maxOrders,
+      });
     } catch (e) {
       error = e.toString();
       rethrow;

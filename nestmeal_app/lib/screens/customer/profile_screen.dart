@@ -5,9 +5,11 @@ import '../../config/theme.dart';
 import '../../services/api_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/payment_provider.dart';
 import '../../models/address_model.dart';
 import '../../providers/address_provider.dart';
 import '../auth/login_screen.dart';
+import 'following_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -130,33 +132,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         if (user.customerProfile != null) ...[
                           const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.warmCream,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.account_balance_wallet_outlined,
-                                  size: 18,
-                                  color: AppTheme.primaryOrange,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Wallet: A\$${user.customerProfile!.walletBalance.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.darkText,
+                          GestureDetector(
+                            onTap: () => _showAddMoneyDialog(context),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppTheme.warmCream,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.account_balance_wallet_outlined,
+                                    size: 18,
+                                    color: AppTheme.primaryOrange,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'A\$${user.customerProfile!.walletBalance.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppTheme.darkText,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primaryOrange,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Text(
+                                      '+ Add',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -191,6 +215,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             icon: Icons.location_on_outlined,
                             title: 'Saved Addresses',
                             onTap: () => _showAddressesSheet(context),
+                          ),
+                          _ProfileMenuItem(
+                            icon: Icons.people_outline,
+                            title: 'Following',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const FollowingScreen(),
+                                ),
+                              );
+                            },
                           ),
                         ]),
 
@@ -374,6 +410,121 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         }).toList(),
       ),
+    );
+  }
+
+  void _showAddMoneyDialog(BuildContext context) {
+    final amountController = TextEditingController();
+    final presetAmounts = [10.0, 20.0, 50.0, 100.0];
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              title: const Text('Add Money to Wallet'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Preset amounts
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: presetAmounts.map((amount) {
+                      return GestureDetector(
+                        onTap: () {
+                          setDialogState(() {
+                            amountController.text = amount.toStringAsFixed(0);
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: amountController.text ==
+                                    amount.toStringAsFixed(0)
+                                ? AppTheme.primaryOrange
+                                : AppTheme.warmCream,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            'A\$${amount.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: amountController.text ==
+                                      amount.toStringAsFixed(0)
+                                  ? Colors.white
+                                  : AppTheme.darkText,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: amountController,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(
+                      labelText: 'Amount (A\$)',
+                      prefixIcon: Icon(Icons.attach_money),
+                    ),
+                    onChanged: (_) => setDialogState(() {}),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child:
+                      Text('Cancel', style: TextStyle(color: AppTheme.greyText)),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final amount =
+                        double.tryParse(amountController.text.trim());
+                    if (amount == null || amount <= 0) return;
+                    Navigator.pop(ctx);
+                    try {
+                      await context
+                          .read<PaymentProvider>()
+                          .topUpWallet(amount);
+                      // Refresh user profile to get updated balance
+                      await context.read<AuthProvider>().fetchProfile();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                'A\$${amount.toStringAsFixed(2)} added to wallet!'),
+                            backgroundColor: AppTheme.successGreen,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(e.toString()),
+                            backgroundColor: AppTheme.errorRed,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryOrange,
+                  ),
+                  child: const Text('Add Money'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 

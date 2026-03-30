@@ -57,6 +57,7 @@ class Meal(models.Model):
     fulfillment_modes = models.JSONField(default=list)  # ['pickup', 'delivery']
     is_available = models.BooleanField(default=True)
     available_days = models.JSONField(default=list)  # ['mon','tue',...]
+    order_cutoff_time = models.TimeField(null=True, blank=True, help_text='Orders must be placed before this time (e.g. 08:00 for lunch)')
     total_orders = models.IntegerField(default=0)
     avg_rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00)
     tags = models.JSONField(default=list, blank=True)
@@ -77,6 +78,37 @@ class Meal(models.Model):
         if self.discount_percentage > 0:
             return round(self.price * (1 - self.discount_percentage / 100), 2)
         return self.price
+
+    @property
+    def is_past_cutoff(self):
+        """True if today is an available day and current time is past the cutoff."""
+        if not self.order_cutoff_time:
+            return False
+        from django.utils import timezone
+        now = timezone.localtime()
+        day_codes = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+        today_code = day_codes[now.weekday()]
+        if today_code in [d.lower() for d in self.available_days]:
+            return now.time() > self.order_cutoff_time
+        return False
+
+
+class MealExtra(models.Model):
+    """Add-on / extra item that can be added to a meal (e.g. extra rice, drink)."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    meal = models.ForeignKey(Meal, on_delete=models.CASCADE, related_name='extras')
+    name = models.CharField(max_length=100)
+    price = models.DecimalField(max_digits=8, decimal_places=2)
+    is_available = models.BooleanField(default=True)
+    display_order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'meal_extras'
+        ordering = ['display_order', 'name']
+
+    def __str__(self):
+        return f"{self.name} (+${self.price}) for {self.meal.title}"
 
 
 class MealImage(models.Model):
