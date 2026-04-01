@@ -25,7 +25,6 @@ class PendingCook {
     );
   }
 
-  // Helper to format "2 days ago" style dates
   String get timeAgo {
     final difference = DateTime.now().difference(createdAt);
     if (difference.inDays > 0) {

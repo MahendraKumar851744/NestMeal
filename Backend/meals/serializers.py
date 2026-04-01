@@ -31,7 +31,17 @@ class MealImageSerializer(serializers.ModelSerializer):
 class MealExtraSerializer(serializers.ModelSerializer):
     class Meta:
         model = MealExtra
-        fields = ['id', 'meal', 'name', 'price', 'is_available', 'display_order', 'created_at']
+        fields = [
+            'id', 
+            'meal', 
+            'name', 
+            'item_type',    # <-- ADDED
+            'price', 
+            'currency',     # <-- ADDED
+            'is_available', 
+            'display_order', 
+            'created_at'
+        ]
         read_only_fields = ['id', 'meal', 'created_at']
 
 

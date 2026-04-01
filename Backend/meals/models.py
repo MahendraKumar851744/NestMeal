@@ -95,10 +95,28 @@ class Meal(models.Model):
 
 class MealExtra(models.Model):
     """Add-on / extra item that can be added to a meal (e.g. extra rice, drink)."""
+    
+    # Re-using choices for consistency
+    MEAL_TYPE_CHOICES = [
+        ('veg', 'Vegetarian'),
+        ('non_veg', 'Non-Vegetarian'),
+        ('egg', 'Egg'),
+    ]
+    CURRENCY_CHOICES = [
+        ('AUD', 'AUD'),
+        ('INR', 'INR'),
+        ('USD', 'USD'),
+        ('EUR', 'EUR'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     meal = models.ForeignKey(Meal, on_delete=models.CASCADE, related_name='extras')
+    
     name = models.CharField(max_length=100)
+    item_type = models.CharField(max_length=7, choices=MEAL_TYPE_CHOICES, default='veg') # <-- NEW FIELD
     price = models.DecimalField(max_digits=8, decimal_places=2)
+    currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default='AUD') # <-- NEW FIELD
+    
     is_available = models.BooleanField(default=True)
     display_order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -108,8 +126,7 @@ class MealExtra(models.Model):
         ordering = ['display_order', 'name']
 
     def __str__(self):
-        return f"{self.name} (+${self.price}) for {self.meal.title}"
-
+        return f"{self.name} ({self.get_item_type_display()}) (+{self.price} {self.currency}) for {self.meal.title}"
 
 class MealImage(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -160,6 +177,7 @@ class PickupSlot(models.Model):
             self.is_available = False
             self.status = 'full'
         super().save(*args, **kwargs)
+
 
 
 class RecurringSlotTemplate(models.Model):

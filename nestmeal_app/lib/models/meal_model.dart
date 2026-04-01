@@ -5,7 +5,9 @@ class MealExtra {
   final String id;
   final String meal;
   final String name;
+  final String itemType; // <-- ADDED
   final double price;
+  final String currency; // <-- ADDED
   final bool isAvailable;
   final int displayOrder;
 
@@ -13,7 +15,9 @@ class MealExtra {
     required this.id,
     required this.meal,
     required this.name,
+    required this.itemType, // <-- ADDED
     required this.price,
+    required this.currency, // <-- ADDED
     required this.isAvailable,
     required this.displayOrder,
   });
@@ -23,7 +27,9 @@ class MealExtra {
       id: json['id'].toString(),
       meal: json['meal']?.toString() ?? '',
       name: json['name'] ?? '',
+      itemType: json['item_type'] ?? 'veg', // <-- ADDED (defaults to veg if null)
       price: toSafeDouble(json['price']),
+      currency: json['currency'] ?? 'AUD',  // <-- ADDED (defaults to AUD if null)
       isAvailable: json['is_available'] ?? true,
       displayOrder: json['display_order'] ?? 0,
     );
@@ -34,7 +40,9 @@ class MealExtra {
       'id': id,
       'meal': meal,
       'name': name,
+      'item_type': itemType, // <-- ADDED
       'price': price,
+      'currency': currency,  // <-- ADDED
       'is_available': isAvailable,
       'display_order': displayOrder,
     };
@@ -275,8 +283,8 @@ class MealModel {
       'effective_price': effectivePrice,
       'currency': currency,
       'category': category,
-      'cuisine_type': cuisineType,
-      'meal_type': mealType,
+      'cuisineType': cuisineType,
+      'mealType': mealType,
       'dietary_tags': dietaryTags,
       'allergen_info': allergenInfo,
       'spice_level': spiceLevel,

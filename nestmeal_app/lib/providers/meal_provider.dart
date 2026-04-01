@@ -194,6 +194,16 @@ class MealProvider extends ChangeNotifier {
     }
   }
 
+  // Add this inside MealProvider (meal_provider.dart)
+  Future<void> createMealExtra(String mealId, Map<String, dynamic> data) async {
+    try {
+      await _apiService.post('${ApiConfig.mealsUrl}/$mealId/extras/', data);
+    } catch (e) {
+      error = e.toString();
+      rethrow;
+    }
+  }
+  
   Future<void> deleteMeal(String id) async {
     isLoading = true;
     error = null;
