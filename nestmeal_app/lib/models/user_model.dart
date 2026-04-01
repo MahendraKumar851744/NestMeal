@@ -37,11 +37,27 @@ class PickupLocationModel {
     );
   }
 
+  // ---> ADDED THIS METHOD <---
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'label': label,
+      'street': street,
+      'city': city,
+      'state': state,
+      'zip_code': zipCode,
+      'latitude': latitude,
+      'longitude': longitude,
+      'is_active': isActive,
+    };
+  }
+
   String get fullAddress {
     final parts = [street, city, state, zipCode].where((s) => s.isNotEmpty);
     return parts.join(', ');
   }
 }
+
 
 class UserModel {
   final String id;

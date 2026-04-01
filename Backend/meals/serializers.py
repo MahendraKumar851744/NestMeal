@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Meal, MealExtra, MealImage, PickupSlot, RecurringSlotTemplate
-
+from accounts.models import PickupLocation
+from accounts.serializers import PickupLocationSerializer
 
 # ---------------------------------------------------------------------------
 # MealImage
@@ -81,6 +82,7 @@ class CookProfileCardSerializer(serializers.Serializer):
 class MealSerializer(serializers.ModelSerializer):
     images = MealImageSerializer(many=True, read_only=True)
     extras = MealExtraSerializer(many=True, read_only=True)
+    pickup_locations = PickupLocationSerializer(many=True, read_only=True) # <-- ADDED
     effective_price = serializers.DecimalField(
         max_digits=10, decimal_places=2, read_only=True,
     )
@@ -102,7 +104,7 @@ class MealSerializer(serializers.ModelSerializer):
             'is_available', 'available_days', 'order_cutoff_time', 'is_past_cutoff',
             'total_orders', 'avg_rating', 'tags',
             'is_featured', 'status',
-            'images', 'extras',
+            'images', 'extras', 'pickup_locations',
             'created_at', 'updated_at',
         ]
         read_only_fields = [
@@ -148,6 +150,7 @@ class MealListSerializer(serializers.ModelSerializer):
 class MealDetailSerializer(serializers.ModelSerializer):
     images = MealImageSerializer(many=True, read_only=True)
     extras = MealExtraSerializer(many=True, read_only=True)
+    pickup_locations = PickupLocationSerializer(many=True, read_only=True)
     effective_price = serializers.DecimalField(
         max_digits=10, decimal_places=2, read_only=True,
     )
@@ -167,7 +170,7 @@ class MealDetailSerializer(serializers.ModelSerializer):
             'is_available', 'available_days', 'order_cutoff_time', 'is_past_cutoff',
             'total_orders', 'avg_rating', 'tags',
             'is_featured', 'status',
-            'images', 'extras',
+            'images', 'extras', 'pickup_locations',
             'created_at', 'updated_at',
         ]
 
@@ -182,6 +185,12 @@ class MealCreateUpdateSerializer(serializers.ModelSerializer):
     The ``cook`` field is set automatically from the authenticated user's
     CookProfile and is not accepted from the request body.
     """
+    # <-- ADDED
+    pickup_locations = serializers.PrimaryKeyRelatedField(
+        many=True, 
+        queryset=PickupLocation.objects.all(), 
+        required=False
+    )
 
     class Meta:
         model = Meal
@@ -194,7 +203,7 @@ class MealCreateUpdateSerializer(serializers.ModelSerializer):
             'spice_level', 'serving_size', 'calories_approx',
             'preparation_time_mins', 'fulfillment_modes',
             'is_available', 'available_days', 'order_cutoff_time', 'tags',
-            'is_featured', 'status',
+            'is_featured', 'status', 'pickup_locations',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -224,6 +233,15 @@ class MealCreateUpdateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     'You can only edit your own meals.',
                 )
+                
+        # <-- ADDED: Ensure the cook owns the assigned pickup locations
+        if 'pickup_locations' in attrs:
+            for loc in attrs['pickup_locations']:
+                if loc.cook_id != cook_profile.id:
+                    raise serializers.ValidationError(
+                        {'pickup_locations': 'You can only assign your own pickup locations.'}
+                    )
+                    
         return attrs
 
     # --- create / update ----------------------------------------------------

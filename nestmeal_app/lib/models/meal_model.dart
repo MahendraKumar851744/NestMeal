@@ -184,6 +184,7 @@ class MealModel {
   final String status;
   final List<MealImage> images;
   final List<MealExtra> extras;
+  final List<PickupLocationModel> pickupLocations;
   final String? orderCutoffTime;
   final bool isPastCutoff;
   final String cookDisplayName;
@@ -221,6 +222,7 @@ class MealModel {
     required this.status,
     required this.images,
     this.extras = const [],
+    this.pickupLocations = const [],
     required this.cookDisplayName,
     required this.createdAt,
     required this.updatedAt,
@@ -260,6 +262,10 @@ class MealModel {
           [],
       extras: (json['extras'] as List?)
               ?.map((e) => MealExtra.fromJson(e))
+              .toList() ??
+          [],
+      pickupLocations: (json['pickup_locations'] as List?) // <-- ADDED
+              ?.map((loc) => PickupLocationModel.fromJson(loc))
               .toList() ??
           [],
       orderCutoffTime: json['order_cutoff_time'],
@@ -302,6 +308,7 @@ class MealModel {
       'status': status,
       'images': images.map((img) => img.toJson()).toList(),
       'extras': extras.map((e) => e.toJson()).toList(),
+      'pickup_locations': pickupLocations.map((l) => l.toJson()).toList(), // <-- ADDED
       'cook_display_name': cookDisplayName,
       'created_at': createdAt,
       'updated_at': updatedAt,

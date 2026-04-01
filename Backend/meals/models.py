@@ -62,6 +62,7 @@ class Meal(models.Model):
     avg_rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00)
     tags = models.JSONField(default=list, blank=True)
     is_featured = models.BooleanField(default=False)
+    pickup_locations = models.ManyToManyField('accounts.PickupLocation', blank=True, related_name='meals')
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='draft')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
