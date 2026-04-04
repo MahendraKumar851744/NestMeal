@@ -68,7 +68,13 @@
       "Bash(python manage.py migrate stories)",
       "Bash(python manage.py makemigrations --name remove_pickup_locations)",
       "Bash(python manage.py check)",
-      "Bash(python manage.py makemigrations --name remove_short_description)"
+      "Bash(python manage.py makemigrations --name remove_short_description)",
+      "Bash(python -c \"from accounts.views import CookPublicDetailView, CookPublicListView, MyFollowingListView, ToggleFollowView; print\\('All views import OK'\\)\")",
+      "Bash(python manage.py makemigrations meals --name=\"default_avg_rating_5\")",
+      "Bash(python manage.py shell -c \"from meals.models import Meal; updated = Meal.objects.filter\\(avg_rating=0.00\\).update\\(avg_rating=5.00\\); print\\(f'Updated {updated} meals'\\)\")",
+      "Bash(python manage.py makemigrations accounts --name=\"default_cook_avg_rating_5\")",
+      "Bash(python manage.py migrate accounts)",
+      "Bash(python manage.py shell -c \"from accounts.models import CookProfile; updated = CookProfile.objects.filter\\(avg_rating=0.00\\).update\\(avg_rating=5.00\\); print\\(f'Updated {updated} cook profiles'\\)\")"
     ]
   }
 }

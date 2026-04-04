@@ -169,9 +169,7 @@ class _FollowingCookCard extends StatelessWidget {
                           size: 14, color: AppTheme.primaryOrange),
                       const SizedBox(width: 2),
                       Text(
-                        cook.avgRating > 0
-                            ? cook.avgRating.toStringAsFixed(1)
-                            : 'New',
+                        cook.avgRating.toStringAsFixed(1),
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
@@ -218,13 +216,13 @@ class _UnfollowButton extends StatefulWidget {
 
 class _UnfollowButtonState extends State<_UnfollowButton> {
   bool _loading = false;
+  bool _unfollowed = false;
 
-  Future<void> _unfollow() async {
+  Future<void> _toggle() async {
     setState(() => _loading = true);
     try {
-      final cookProvider = context.read<CookProvider>();
-      await cookProvider.toggleFollow(widget.cookId);
-      await cookProvider.fetchFollowing();
+      await context.read<CookProvider>().toggleFollow(widget.cookId);
+      if (mounted) setState(() => _unfollowed = !_unfollowed);
     } catch (_) {
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -243,8 +241,26 @@ class _UnfollowButtonState extends State<_UnfollowButton> {
         ),
       );
     }
+    if (_unfollowed) {
+      return ElevatedButton(
+        onPressed: _toggle,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppTheme.primaryOrange,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+        child: const Text(
+          'Follow',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+      );
+    }
     return OutlinedButton(
-      onPressed: _unfollow,
+      onPressed: _toggle,
       style: OutlinedButton.styleFrom(
         foregroundColor: AppTheme.primaryOrange,
         side: const BorderSide(color: AppTheme.primaryOrange),

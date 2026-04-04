@@ -18,6 +18,10 @@ class CustomerShell extends StatefulWidget {
 class _CustomerShellState extends State<CustomerShell> {
   int _currentIndex = 0;
 
+  // One observer per shell instance — never shared across Navigators
+  final RouteObserver<ModalRoute<void>> _homeRouteObserver =
+      RouteObserver<ModalRoute<void>>();
+
   // Navigator keys for each tab so back button works within tabs
   final List<GlobalKey<NavigatorState>> _navigatorKeys = [
     GlobalKey<NavigatorState>(),
@@ -27,13 +31,19 @@ class _CustomerShellState extends State<CustomerShell> {
     GlobalKey<NavigatorState>(),
   ];
 
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    OrdersScreen(),
-    _PlansPlaceholder(),
-    CartScreen(),
-    ProfileScreen(),
-  ];
+  late final List<Widget> _screens;
+
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      HomeScreen(routeObserver: _homeRouteObserver),
+      OrdersScreen(onGoHome: () => setState(() => _currentIndex = 0)),
+      const _PlansPlaceholder(),
+      CartScreen(onGoHome: () => setState(() => _currentIndex = 0)),
+      const ProfileScreen(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +70,7 @@ class _CustomerShellState extends State<CustomerShell> {
             return Navigator(
               key: _navigatorKeys[index],
               initialRoute: '/',
+              observers: index == 0 ? [_homeRouteObserver] : [],
               onGenerateRoute: (settings) {
                 return MaterialPageRoute(
                   builder: (_) => _screens[index],

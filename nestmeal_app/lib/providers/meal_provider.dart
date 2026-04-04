@@ -203,6 +203,24 @@ class MealProvider extends ChangeNotifier {
       rethrow;
     }
   }
+
+  Future<void> updateMealExtra(String mealId, String extraId, Map<String, dynamic> data) async {
+    try {
+      await _apiService.put('${ApiConfig.mealsUrl}/$mealId/extras/$extraId/', data);
+    } catch (e) {
+      error = e.toString();
+      rethrow;
+    }
+  }
+
+  Future<void> deleteMealExtra(String mealId, String extraId) async {
+    try {
+      await _apiService.delete('${ApiConfig.mealsUrl}/$mealId/extras/$extraId/');
+    } catch (e) {
+      error = e.toString();
+      rethrow;
+    }
+  }
   
   Future<void> deleteMeal(String id) async {
     isLoading = true;

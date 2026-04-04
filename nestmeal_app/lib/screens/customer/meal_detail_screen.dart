@@ -1410,11 +1410,14 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
     }
     double totalPrice = meal.effectivePrice + selectedExtrasPrice;
 
+    // Availability check — determines whether Add to Cart is enabled
+    final String? unavailabilityReason = _checkMealAvailability(meal);
+
     // --- NEW ADDED CODE START: Color logic for main meal type ---
     final isVegMain = meal.mealType == 'veg';
     final isEggMain = meal.mealType == 'egg';
-    final mainTypeColor = isVegMain 
-        ? Colors.green.shade600 
+    final mainTypeColor = isVegMain
+        ? Colors.green.shade600
         : (isEggMain ? Colors.amber.shade700 : Colors.red.shade600);
     // --- NEW ADDED CODE END ---
 
@@ -1688,10 +1691,8 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                             _InfoItem(
                               icon: Icons.star,
                               iconColor: AppTheme.primaryOrange,
-                              label: meal.avgRating > 0
-                                  ? meal.avgRating.toStringAsFixed(1)
-                                  : 'New',
-                              sublabel: '${meal.totalOrders} orders',
+                              label: meal.avgRating.toStringAsFixed(1),
+                              sublabel: 'Rating',
                             ),
                             if (meal.servingSize.isNotEmpty) ...[
                               _divider(),
@@ -2348,8 +2349,8 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                           }),
                       ],
 
-                      // Bottom padding for sticky button
-                      const SizedBox(height: 100),
+                      // Bottom padding for sticky button (extra space for reason banner)
+                      const SizedBox(height: 150),
                     ],
                   ),
                 ),
@@ -2374,40 +2375,129 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                   ),
                 ],
               ),
-              child: SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: meal.isAvailable && !meal.isPastCutoff
-                      ? () => _addToCart(meal)
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryOrange,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: AppTheme.lightGrey,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (unavailabilityReason != null) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      margin: const EdgeInsets.only(bottom: 10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.errorRed.withValues(alpha: 0.07),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: AppTheme.errorRed.withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline,
+                              size: 16, color: AppTheme.errorRed),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              unavailabilityReason,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppTheme.errorRed,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: unavailabilityReason == null
+                          ? () => _addToCart(meal)
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryOrange,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: AppTheme.lightGrey,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: Text(
+                        unavailabilityReason != null
+                            ? 'Not Available Right Now'
+                            : 'Add to Cart  \u00B7  $cs${totalPrice.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
-                  child: Text(
-                    meal.isPastCutoff
-                        ? 'Orders Closed for Today'
-                        : meal.isAvailable
-                            // --- CHANGED CODE: Show updated total price ---
-                            ? 'Add to Cart  \u00B7  $cs${totalPrice.toStringAsFixed(2)}'
-                            : 'Currently Unavailable',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
+                ],
               ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  // ─── Availability helpers ────────────────────────────────────────────
+
+  String _getTodayDayCode() {
+    const dayCodes = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+    return dayCodes[DateTime.now().weekday - 1];
+  }
+
+  String _getTimeCategory() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'breakfast';
+    if (hour < 17) return 'lunch';
+    return 'dinner';
+  }
+
+  /// Returns a human-readable reason if the meal cannot be ordered right now,
+  /// or null if it is fully available.
+  String? _checkMealAvailability(MealDetail meal) {
+    if (!meal.isAvailable) {
+      return 'This meal is currently unavailable.';
+    }
+    if (meal.isPastCutoff) {
+      return 'Orders closed for today — cutoff was ${meal.orderCutoffTime}.';
+    }
+    // Day check
+    if (meal.availableDays.isNotEmpty) {
+      final todayCode = _getTodayDayCode();
+      if (!meal.availableDays.contains(todayCode)) {
+        const dayNames = {
+          'mon': 'Mon', 'tue': 'Tue', 'wed': 'Wed', 'thu': 'Thu',
+          'fri': 'Fri', 'sat': 'Sat', 'sun': 'Sun',
+        };
+        final todayName = dayNames[todayCode] ?? todayCode;
+        final availableStr =
+            meal.availableDays.map((d) => dayNames[d] ?? d).join(', ');
+        return 'Not available today ($todayName). Available on: $availableStr.';
+      }
+    }
+    // Time-category check
+    if (meal.category.isNotEmpty) {
+      final currentCategory = _getTimeCategory();
+      if (meal.category != currentCategory) {
+        const timeRanges = {
+          'breakfast': 'before 12 PM',
+          'lunch': '12 PM – 5 PM',
+          'dinner': 'after 5 PM',
+        };
+        final catName =
+            meal.category[0].toUpperCase() + meal.category.substring(1);
+        final range = timeRanges[meal.category] ?? '';
+        return 'This is a $catName meal, available $range.';
+      }
+    }
+    return null;
   }
 
   // ─── Helper Widgets ─────────────────────────────────────────────────

@@ -3,13 +3,16 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../config/theme.dart';
 import '../../models/order_model.dart';
 import '../../providers/order_provider.dart';
 import '../../widgets/status_badge.dart';
 import 'order_detail_screen.dart';
 
 class OrdersScreen extends StatefulWidget {
-  const OrdersScreen({super.key});
+  final VoidCallback? onGoHome;
+
+  const OrdersScreen({super.key, this.onGoHome});
 
   @override
   State<OrdersScreen> createState() => _OrdersScreenState();
@@ -206,6 +209,29 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 : 'Your order history will appear here',
             style: TextStyle(fontSize: 14, color: Colors.grey[400]),
           ),
+          if (_showActive && widget.onGoHome != null) ...[
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => widget.onGoHome!.call(),
+              icon: const Icon(Icons.restaurant_menu, color: Colors.white),
+              label: const Text(
+                'Order Now',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryOrange,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+            ),
+          ],
         ],
       ),
     );

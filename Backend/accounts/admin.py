@@ -7,6 +7,7 @@ from .models import (
     CookProfile,
     Address,
     AdminProfile,
+    Follow,
 )
 
 
@@ -58,6 +59,14 @@ class AddressAdmin(admin.ModelAdmin):
     list_display = ['label', 'user', 'street', 'city', 'state', 'is_default', 'created_at']
     list_filter = ['is_default', 'city', 'state']
     search_fields = ['user__email', 'user__full_name', 'street', 'city']
+    readonly_fields = ['id', 'created_at']
+
+
+@admin.register(Follow)
+class FollowAdmin(admin.ModelAdmin):
+    list_display = ['customer', 'cook', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['customer__email', 'customer__full_name', 'cook__display_name']
     readonly_fields = ['id', 'created_at']
 
 

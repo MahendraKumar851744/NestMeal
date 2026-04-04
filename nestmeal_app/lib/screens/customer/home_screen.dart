@@ -15,13 +15,15 @@ import 'search_screen.dart';
 import 'story_viewer_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final RouteObserver<ModalRoute<void>>? routeObserver;
+
+  const HomeScreen({super.key, this.routeObserver});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with RouteAware {
   bool _isInitialized = false;
 
   @override
@@ -31,6 +33,25 @@ class _HomeScreenState extends State<HomeScreen> {
       _isInitialized = true;
       _loadData();
     }
+    // Subscribe to the home tab's RouteObserver so we get didPopNext callbacks
+    final observer = widget.routeObserver;
+    final route = ModalRoute.of(context);
+    if (observer != null && route != null) {
+      observer.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.routeObserver?.unsubscribe(this);
+    super.dispose();
+  }
+
+  /// Called when a route above this one is popped off — i.e. user navigated
+  /// back to home. Re-fetch so the time-filtered meal list is restored.
+  @override
+  void didPopNext() {
+    _loadData();
   }
 
   String _getTodayDayCode() {
@@ -794,27 +815,6 @@ class _TrendingMealRow extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (_isNewMeal(meal.createdAt)) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                                color: AppTheme.primaryOrange, width: 1),
-                          ),
-                          child: const Text(
-                            'NEW',
-                            style: TextStyle(
-                              color: AppTheme.primaryOrange,
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -865,14 +865,6 @@ class _TrendingMealRow extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${meal.totalOrders} orders',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.greyText,
                         ),
                       ),
                     ],

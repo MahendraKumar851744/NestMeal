@@ -15,7 +15,9 @@ import '../common/location_picker_screen.dart';
 import 'order_detail_screen.dart';
 
 class CartScreen extends StatefulWidget {
-  const CartScreen({super.key});
+  final VoidCallback? onGoHome;
+
+  const CartScreen({super.key, this.onGoHome});
 
   @override
   State<CartScreen> createState() => _CartScreenState();
@@ -621,13 +623,7 @@ class _CartScreenState extends State<CartScreen> {
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () {
-              // Switch to Home tab (index 0) via the CustomerShell
-              final navState = Navigator.of(context, rootNavigator: true);
-              if (navState.canPop()) {
-                navState.pop();
-              }
-            },
+            onPressed: () => widget.onGoHome?.call(),
             icon: const Icon(Icons.restaurant_menu, color: Colors.white),
             label: const Text(
               'Browse Meals',

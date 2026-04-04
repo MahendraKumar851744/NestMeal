@@ -32,6 +32,7 @@ class _CookProfileScreenState extends State<CookProfileScreen>
   List<ReviewModel> _reviews = [];
   List<StoryModel> _stories = [];
   late TabController _tabController;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -43,6 +44,7 @@ class _CookProfileScreenState extends State<CookProfileScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -87,12 +89,10 @@ class _CookProfileScreenState extends State<CookProfileScreen>
         _stories = List.from(storyProvider.cookStories);
       } catch (_) {}
 
-      // Ensure following state is loaded
-      if (cookProvider.followedCookIds.isEmpty) {
-        try {
-          await cookProvider.fetchFollowing();
-        } catch (_) {}
-      }
+      // Always sync following state so the follow button is accurate
+      try {
+        await cookProvider.fetchFollowing();
+      } catch (_) {}
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -161,12 +161,13 @@ class _CookProfileScreenState extends State<CookProfileScreen>
     final cookName = cook?.displayName ??
         (_cookMeals.isNotEmpty ? _cookMeals.first.cookDisplayName : 'Cook');
     final cookProvider = context.watch<CookProvider>();
-    final isFollowed = cookProvider.isFollowing(widget.cookId);
+    final isFollowed = cookProvider.isFollowing(widget.cookId) || (_cook?.isFollowed ?? false);
     final hasStories = _stories.isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppTheme.warmCream,
       body: NestedScrollView(
+        controller: _scrollController,
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverAppBar(
             pinned: true,
@@ -326,6 +327,13 @@ class _CookProfileScreenState extends State<CookProfileScreen>
                         child: ElevatedButton.icon(
                           onPressed: () {
                             _tabController.animateTo(0);
+                            if (_scrollController.hasClients) {
+                              _scrollController.animateTo(
+                                _scrollController.position.maxScrollExtent,
+                                duration: const Duration(milliseconds: 400),
+                                curve: Curves.easeInOut,
+                              );
+                            }
                           },
                           icon: const Icon(Icons.restaurant_menu, size: 18),
                           label: const Text('Order'),

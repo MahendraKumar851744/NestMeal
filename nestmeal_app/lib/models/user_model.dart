@@ -134,6 +134,7 @@ class CookProfile {
   final String status;
   final double commissionRate;
   final int followersCount;
+  final bool isFollowed;
 
   CookProfile({
     required this.id,
@@ -159,6 +160,7 @@ class CookProfile {
     required this.status,
     required this.commissionRate,
     this.followersCount = 0,
+    this.isFollowed = false,
   });
 
   factory CookProfile.fromJson(Map<String, dynamic> json) {
@@ -190,6 +192,7 @@ class CookProfile {
       status: json['status'] ?? '',
       commissionRate: toSafeDouble(json['commission_rate']),
       followersCount: json['followers_count'] ?? 0,
+      isFollowed: json['is_followed'] ?? false,
     );
   }
 

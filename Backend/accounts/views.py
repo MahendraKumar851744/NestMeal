@@ -254,7 +254,6 @@ class CookPublicListView(generics.ListAPIView):
         qs = (
             CookProfile.objects
             .select_related('user')
-            .prefetch_related('pickup_locations')
             .filter(status='active', is_active=True)
         )
         return _annotate_cook_queryset(qs, self.request)
@@ -271,7 +270,6 @@ class CookPublicDetailView(generics.RetrieveAPIView):
         qs = (
             CookProfile.objects
             .select_related('user')
-            .prefetch_related('pickup_locations')
             .filter(status='active', is_active=True)
         )
         return _annotate_cook_queryset(qs, self.request)
@@ -341,7 +339,6 @@ class MyFollowingListView(generics.ListAPIView):
         qs = (
             CookProfile.objects
             .select_related('user')
-            .prefetch_related('pickup_locations')
             .filter(pk__in=cook_ids, status='active', is_active=True)
         )
         return _annotate_cook_queryset(qs, self.request)

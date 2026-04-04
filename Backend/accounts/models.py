@@ -142,7 +142,7 @@ class CookProfile(models.Model):
     bank_account_holder = models.CharField(max_length=255, blank=True)
 
     commission_rate = models.DecimalField(max_digits=4, decimal_places=2, default=0.10)
-    avg_rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00)
+    avg_rating = models.DecimalField(max_digits=3, decimal_places=2, default=5.00)
     total_reviews = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)
     status = models.CharField(max_length=25, choices=STATUS_CHOICES, default='pending_verification')

@@ -58,7 +58,7 @@ class Meal(models.Model):
     available_days = models.JSONField(default=list)  # ['mon','tue',...]
     order_cutoff_time = models.TimeField(null=True, blank=True, help_text='Orders must be placed before this time (e.g. 08:00 for lunch)')
     total_orders = models.IntegerField(default=0)
-    avg_rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00)
+    avg_rating = models.DecimalField(max_digits=3, decimal_places=2, default=5.00)
     tags = models.JSONField(default=list, blank=True)
     is_featured = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='draft')

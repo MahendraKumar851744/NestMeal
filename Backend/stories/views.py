@@ -4,7 +4,6 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 
-from accounts.models import Follow
 from accounts.permissions import IsCook, IsCustomer
 from .models import Story, StoryView
 from .serializers import StorySerializer, StoryCreateSerializer
@@ -20,17 +19,13 @@ def _active_stories_qs():
 
 
 class StoryFeedView(generics.ListAPIView):
-    """GET /stories/feed/ -- active stories from cooks the customer follows,
-    ordered by cook then recency."""
+    """GET /stories/feed/ -- all active stories visible to any customer."""
 
     serializer_class = StorySerializer
     permission_classes = [IsAuthenticated, IsCustomer]
 
     def get_queryset(self):
-        followed_cook_ids = Follow.objects.filter(
-            customer=self.request.user
-        ).values_list('cook_id', flat=True)
-        return _active_stories_qs().filter(cook_id__in=followed_cook_ids)
+        return _active_stories_qs()
 
 
 class CookStoriesView(generics.ListAPIView):

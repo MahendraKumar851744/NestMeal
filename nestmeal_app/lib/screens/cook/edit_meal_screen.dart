@@ -1314,6 +1314,154 @@ class _EditMealScreenState extends State<EditMealScreen> {
     );
   }
 
+  void _showEditExtraDialog(MealExtra extra) {
+    final formKey = GlobalKey<FormState>();
+    final nameCtrl = TextEditingController(text: extra.name);
+    final priceCtrl = TextEditingController(text: extra.price.toStringAsFixed(2));
+    String selectedType = extra.itemType;
+    String selectedCurrency = extra.currency;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Add-on'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Add-on Name'),
+                validator: (val) => (val == null || val.isEmpty) ? 'Required' : null,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: TextFormField(
+                      controller: priceCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Price'),
+                      validator: (val) => (val == null || double.tryParse(val) == null) ? 'Invalid' : null,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: StatefulBuilder(
+                      builder: (_, setLocal) => DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        value: selectedCurrency,
+                        decoration: const InputDecoration(labelText: 'Curr'),
+                        items: _currencies.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                        onChanged: (val) => setLocal(() => selectedCurrency = val!),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              StatefulBuilder(
+                builder: (_, setLocal) => DropdownButtonFormField<String>(
+                  value: selectedType,
+                  decoration: const InputDecoration(labelText: 'Type'),
+                  items: _mealTypes.map((t) => DropdownMenuItem(value: t, child: Text(_formatTagLabel(t)))).toList(),
+                  onChanged: (val) => setLocal(() => selectedType = val!),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              if (!formKey.currentState!.validate()) return;
+              Navigator.pop(ctx);
+              try {
+                await context.read<MealProvider>().updateMealExtra(
+                  widget.meal.id,
+                  extra.id,
+                  {
+                    'name': nameCtrl.text.trim(),
+                    'price': double.parse(priceCtrl.text.trim()),
+                    'item_type': selectedType,
+                    'currency': selectedCurrency,
+                    'is_available': extra.isAvailable,
+                  },
+                );
+                setState(() {
+                  final idx = _existingExtras.indexWhere((e) => e.id == extra.id);
+                  if (idx != -1) {
+                    _existingExtras[idx] = MealExtra(
+                      id: extra.id,
+                      meal: extra.meal,
+                      name: nameCtrl.text.trim(),
+                      price: double.parse(priceCtrl.text.trim()),
+                      itemType: selectedType,
+                      currency: selectedCurrency,
+                      isAvailable: extra.isAvailable,
+                      displayOrder: extra.displayOrder,
+                    );
+                  }
+                });
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Extra updated'), backgroundColor: AppTheme.successGreen),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to update: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteExtra(MealExtra extra) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Add-on'),
+        content: Text('Remove "${extra.name}" from this meal?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await context.read<MealProvider>().deleteMealExtra(widget.meal.id, extra.id);
+                setState(() => _existingExtras.removeWhere((e) => e.id == extra.id));
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Extra deleted'), backgroundColor: AppTheme.successGreen),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to delete: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _handleUpdate() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -1766,13 +1914,13 @@ class _EditMealScreenState extends State<EditMealScreen> {
                           ..._existingExtras.map((item) {
                             final isVeg = item.itemType == 'veg';
                             final isEgg = item.itemType == 'egg';
-                            final typeColor = isVeg 
-                                ? Colors.green.shade600 
+                            final typeColor = isVeg
+                                ? Colors.green.shade600
                                 : (isEgg ? Colors.amber.shade700 : Colors.red.shade600);
 
                             return Container(
                               margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                               decoration: BoxDecoration(
                                 color: Colors.grey.shade50,
                                 border: Border.all(color: AppTheme.lightGrey),
@@ -1803,12 +1951,27 @@ class _EditMealScreenState extends State<EditMealScreen> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.grey)),
-                                        const SizedBox(height: 4),
-                                        Text('${_formatTagLabel(item.itemType)}  •  ${item.price} ${item.currency}', 
-                                          style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                        Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '${_formatTagLabel(item.itemType)}  •  ${item.price} ${item.currency}',
+                                          style: const TextStyle(fontSize: 12, color: AppTheme.greyText),
+                                        ),
                                       ],
                                     ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.edit_outlined, size: 18, color: AppTheme.primaryOrange),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    onPressed: () => _showEditExtraDialog(item),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    onPressed: () => _confirmDeleteExtra(item),
                                   ),
                                 ],
                               ),
