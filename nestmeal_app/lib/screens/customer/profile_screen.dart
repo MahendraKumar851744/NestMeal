@@ -153,7 +153,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'A\$${user.customerProfile!.walletBalance.toStringAsFixed(2)}',
+                                    '\$${user.customerProfile!.walletBalance.toStringAsFixed(2)}',
                                     style: const TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w700,
@@ -451,7 +451,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            'A\$${amount.toStringAsFixed(0)}',
+                            '\$${amount.toStringAsFixed(0)}',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: amountController.text ==
@@ -470,7 +470,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(
-                      labelText: 'Amount (A\$)',
+                      labelText: 'Amount (\$)',
                       prefixIcon: Icon(Icons.attach_money),
                     ),
                     onChanged: (_) => setDialogState(() {}),
@@ -499,7 +499,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                                'A\$${amount.toStringAsFixed(2)} added to wallet!'),
+                                '\$${amount.toStringAsFixed(2)} added to wallet!'),
                             backgroundColor: AppTheme.successGreen,
                           ),
                         );

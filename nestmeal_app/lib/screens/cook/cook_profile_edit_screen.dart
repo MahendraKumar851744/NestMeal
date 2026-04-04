@@ -511,8 +511,8 @@
 //                           keyboardType: TextInputType.number,
 //                           decoration: InputDecoration(
 //                             labelText: _deliveryFeeType == 'flat'
-//                                 ? 'Flat Fee (A\$)'
-//                                 : 'Fee per km (A\$)',
+//                                 ? 'Flat Fee (\$)'
+//                                 : 'Fee per km (\$)',
 //                             prefixIcon: const Icon(Icons.attach_money),
 //                           ),
 //                         ),
@@ -522,7 +522,7 @@
 //                         controller: _deliveryMinOrderController,
 //                         keyboardType: TextInputType.number,
 //                         decoration: const InputDecoration(
-//                           labelText: 'Minimum Order Amount (A\$)',
+//                           labelText: 'Minimum Order Amount (\$)',
 //                           prefixIcon: Icon(Icons.attach_money),
 //                         ),
 //                       ),
@@ -1889,8 +1889,8 @@ class _CookProfileEditScreenState extends State<CookProfileEditScreen> {
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
                         labelText: _deliveryFeeType == 'flat'
-                            ? 'Flat Fee (A\$)'
-                            : 'Fee per km (A\$)',
+                            ? 'Flat Fee (\$)'
+                            : 'Fee per km (\$)',
                         prefixIcon: const Icon(Icons.attach_money),
                       ),
                     ),
@@ -1900,7 +1900,7 @@ class _CookProfileEditScreenState extends State<CookProfileEditScreen> {
                     controller: _deliveryMinOrderController,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
-                      labelText: 'Minimum Order Amount (A\$)',
+                      labelText: 'Minimum Order Amount (\$)',
                       prefixIcon: Icon(Icons.receipt_long_outlined),
                     ),
                   ),

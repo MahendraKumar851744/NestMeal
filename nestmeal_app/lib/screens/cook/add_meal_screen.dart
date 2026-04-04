@@ -495,7 +495,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
                       controller: _priceController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
-                        labelText: 'Price (A\$)',
+                        labelText: 'Price (\$)',
                         hintText: '0.00',
                         prefixIcon: Icon(Icons.attach_money),
                       ),
@@ -762,8 +762,35 @@ class _AddMealScreenState extends State<AddMealScreen> {
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 20),
-
+              if (_selectedFulfillmentModes.contains('pickup')) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryOrange.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: AppTheme.primaryOrange.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline,
+                          size: 18, color: AppTheme.primaryOrange),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Make sure you have Pickup Slots set up in Manage Slots, otherwise customers cannot place pickup orders.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.primaryOrange,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 20),
 
               // Available Days

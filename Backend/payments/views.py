@@ -90,6 +90,99 @@ class PaymentViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED,
         )
 
+    @action(detail=False, methods=['post'], url_path='wallet-pay')
+    def wallet_pay(self, request):
+        """
+        Pay for an order directly from the customer's wallet balance.
+        No Stripe involved — instant deduction.
+        """
+        from decimal import Decimal
+        from accounts.models import CustomerProfile
+        from orders.models import Order
+
+        order_id = request.data.get('order_id')
+        if not order_id:
+            return Response(
+                {'error': 'order_id is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            order = Order.objects.get(id=order_id, customer=request.user)
+        except Order.DoesNotExist:
+            return Response(
+                {'error': 'Order not found.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if order.payment_status == 'paid':
+            return Response(
+                {'error': 'This order has already been paid.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            profile = request.user.customer_profile
+        except CustomerProfile.DoesNotExist:
+            return Response(
+                {'error': 'Customer profile not found.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        amount = order.total_amount
+        if profile.wallet_balance < amount:
+            return Response(
+                {
+                    'error': f'Insufficient wallet balance. '
+                             f'You have ${float(profile.wallet_balance):.2f} '
+                             f'but need ${float(amount):.2f}.'
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Deduct balance
+        profile.wallet_balance -= amount
+        profile.save(update_fields=['wallet_balance'])
+
+        # Record wallet transaction
+        from .models import WalletTransaction
+        WalletTransaction.objects.create(
+            user=request.user,
+            amount=-amount,
+            transaction_type='payment',
+            description=f'Payment for order {order.order_number}',
+            balance_after=profile.wallet_balance,
+            order=order,
+        )
+
+        # Create payment record
+        payment = Payment.objects.create(
+            order=order,
+            customer=request.user,
+            amount=amount,
+            currency='AUD',
+            method='wallet',
+            gateway='wallet',
+            status='success',
+            paid_at=timezone.now(),
+        )
+
+        # Update order
+        order.payment_status = 'paid'
+        if order.status in ('placed', 'accepted'):
+            order.status = 'preparing'
+        order.save(update_fields=['payment_status', 'status'])
+
+        return Response(
+            {
+                'payment_id': str(payment.id),
+                'wallet_balance_remaining': float(profile.wallet_balance),
+                'amount_paid': float(amount),
+                'message': 'Payment successful via wallet.',
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
     @action(detail=False, methods=['post'], url_path='confirm')
     def confirm_payment(self, request):
         """
@@ -211,14 +304,14 @@ class WalletTopUpView(APIView):
             user=request.user,
             amount=decimal_amount,
             transaction_type='topup',
-            description=f'Wallet top-up of A${amount:.2f}',
+            description=f'Wallet top-up of ${amount:.2f}',
             balance_after=new_balance,
         )
 
         return Response({
             'balance': float(new_balance),
             'amount_added': amount,
-            'message': f'A${amount:.2f} added to wallet successfully.',
+            'message': f'${amount:.2f} added to wallet successfully.',
         })
 
 

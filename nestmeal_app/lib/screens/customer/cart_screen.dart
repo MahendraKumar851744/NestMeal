@@ -10,6 +10,7 @@ import '../../providers/cart_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../providers/slot_provider.dart';
 import '../../providers/coupon_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/payment_provider.dart';
 import '../common/location_picker_screen.dart';
 import 'order_detail_screen.dart';
@@ -104,7 +105,7 @@ class _CartScreenState extends State<CartScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Coupon applied! You save A\$${discount.toStringAsFixed(2)}'),
+              content: Text('Coupon applied! You save \$${discount.toStringAsFixed(2)}'),
               backgroundColor: AppTheme.successGreen,
             ),
           );
@@ -210,24 +211,31 @@ class _CartScreenState extends State<CartScreen> {
       final order = orderProvider.selectedOrder;
       if (order == null) throw Exception('Order creation failed');
 
-      // 2. Create Stripe PaymentIntent
-      final intentData = await paymentProvider.createPaymentIntent(order.id);
-      final clientSecret = intentData['client_secret'] as String;
-      final paymentIntentId =
-          intentData['stripe_payment_intent_id'] as String;
+      if (cart.selectedPaymentMethod == 'wallet') {
+        // ── Wallet payment ────────────────────────────────────────────────
+        await paymentProvider.payWithWallet(order.id);
 
-      if (stripe_svc.isStripeSupported) {
-        // 3. Init & present the Stripe payment sheet (mobile/desktop)
-        await stripe_svc.initAndPresentPaymentSheet(
-          clientSecret: clientSecret,
-          merchantDisplayName: 'NestMeal',
-        );
+        // Refresh wallet balance in auth provider
+        if (mounted) context.read<AuthProvider>().fetchProfile();
+      } else {
+        // ── Stripe card payment ───────────────────────────────────────────
+        final intentData =
+            await paymentProvider.createPaymentIntent(order.id);
+        final clientSecret = intentData['client_secret'] as String;
+        final paymentIntentId =
+            intentData['stripe_payment_intent_id'] as String;
+
+        if (stripe_svc.isStripeSupported) {
+          await stripe_svc.initAndPresentPaymentSheet(
+            clientSecret: clientSecret,
+            merchantDisplayName: 'NestMeal',
+          );
+        }
+
+        await paymentProvider.confirmPayment(paymentIntentId);
       }
 
-      // 4. Confirm payment with backend
-      await paymentProvider.confirmPayment(paymentIntentId);
-
-      // 6. Clear cart and navigate
+      // Clear cart and navigate
       cart.clearCart();
       _specialInstructionsController.clear();
       _deliveryStreetController.clear();
@@ -251,11 +259,11 @@ class _CartScreenState extends State<CartScreen> {
         );
       }
     } on UnsupportedError catch (e) {
-      // Stripe not supported on this platform (web)
+      // Stripe payment sheet not supported on this platform
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.message ?? 'Payments not supported on this platform'),
+            content: Text(e.message ?? 'Card payments not supported on this platform. Try wallet payment.'),
             backgroundColor: AppTheme.errorRed,
           ),
         );
@@ -647,6 +655,148 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
+  Widget _buildPaymentMethodSelector(CartProvider cart) {
+    final authProvider = context.watch<AuthProvider>();
+    final walletBalance =
+        authProvider.currentUser?.customerProfile?.walletBalance ?? 0.0;
+    final canUseWallet = walletBalance >= cart.totalAmount;
+
+    return Column(
+      children: [
+        // Card option
+        GestureDetector(
+          onTap: () => cart.setPaymentMethod('card'),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: cart.selectedPaymentMethod == 'card'
+                    ? AppTheme.primaryOrange
+                    : AppTheme.lightGrey,
+                width: cart.selectedPaymentMethod == 'card' ? 2 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF635BFF).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.credit_card,
+                    color: Color(0xFF635BFF),
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Card / Stripe',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        'Cards, Apple Pay, Google Pay & more',
+                        style: TextStyle(
+                            fontSize: 12, color: AppTheme.greyText),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  cart.selectedPaymentMethod == 'card'
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                  color: cart.selectedPaymentMethod == 'card'
+                      ? AppTheme.primaryOrange
+                      : AppTheme.greyText,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+
+        // Wallet option
+        GestureDetector(
+          onTap: canUseWallet ? () => cart.setPaymentMethod('wallet') : null,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: canUseWallet ? Colors.white : AppTheme.lightGrey.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: cart.selectedPaymentMethod == 'wallet'
+                    ? AppTheme.primaryOrange
+                    : AppTheme.lightGrey,
+                width: cart.selectedPaymentMethod == 'wallet' ? 2 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.successGreen.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.account_balance_wallet_outlined,
+                    color: canUseWallet
+                        ? AppTheme.successGreen
+                        : AppTheme.greyText,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Wallet',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        canUseWallet
+                            ? 'Balance: \$${walletBalance.toStringAsFixed(2)}'
+                            : 'Insufficient balance (\$${walletBalance.toStringAsFixed(2)})',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: canUseWallet
+                              ? AppTheme.successGreen
+                              : AppTheme.errorRed,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  cart.selectedPaymentMethod == 'wallet'
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                  color: canUseWallet
+                      ? (cart.selectedPaymentMethod == 'wallet'
+                          ? AppTheme.primaryOrange
+                          : AppTheme.greyText)
+                      : AppTheme.lightGrey,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildCartContent(CartProvider cart) {
     return Stack(
       children: [
@@ -693,29 +843,41 @@ class _CartScreenState extends State<CartScreen> {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Expanded(
-                    child: _ToggleButton(
-                      label: 'Pickup',
-                      icon: Icons.store_outlined,
-                      isSelected: cart.fulfillmentType == 'pickup',
-                      onTap: () {
-                        cart.setFulfillmentType('pickup');
-                        _loadSlots();
-                      },
+                  if (cart.supportedFulfillmentModes.isEmpty ||
+                      cart.supportedFulfillmentModes.contains('pickup')) ...[
+                    Expanded(
+                      child: _ToggleButton(
+                        label: 'Pickup',
+                        icon: Icons.store_outlined,
+                        isSelected: cart.fulfillmentType == 'pickup',
+                        onTap: () {
+                          cart.setFulfillmentType('pickup');
+                          _loadSlots();
+                        },
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _ToggleButton(
-                      label: 'Delivery',
-                      icon: Icons.delivery_dining_outlined,
-                      isSelected: cart.fulfillmentType == 'delivery',
-                      onTap: () {
-                        cart.setFulfillmentType('delivery');
-                        _loadSlots();
-                      },
+                  ],
+                  if ((cart.supportedFulfillmentModes.isEmpty ||
+                          cart.supportedFulfillmentModes.contains('pickup')) &&
+                      (cart.supportedFulfillmentModes.isEmpty ||
+                          cart.supportedFulfillmentModes
+                              .contains('delivery'))) ...[
+                    const SizedBox(width: 12),
+                  ],
+                  if (cart.supportedFulfillmentModes.isEmpty ||
+                      cart.supportedFulfillmentModes.contains('delivery')) ...[
+                    Expanded(
+                      child: _ToggleButton(
+                        label: 'Delivery',
+                        icon: Icons.delivery_dining_outlined,
+                        isSelected: cart.fulfillmentType == 'delivery',
+                        onTap: () {
+                          cart.setFulfillmentType('delivery');
+                          _loadSlots();
+                        },
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
               const SizedBox(height: 16),
@@ -816,9 +978,9 @@ class _CartScreenState extends State<CartScreen> {
 
               const SizedBox(height: 16),
 
-              // Payment Method — Stripe
+              // Payment Method
               Text(
-                'Payment',
+                'Payment Method',
                 style: GoogleFonts.playfairDisplay(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -826,61 +988,7 @@ class _CartScreenState extends State<CartScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppTheme.primaryOrange,
-                    width: 1.5,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF635BFF).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.credit_card,
-                        color: Color(0xFF635BFF),
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Pay with Stripe',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Cards, Apple Pay, Google Pay & more',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.greyText,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(
-                      Icons.lock_outlined,
-                      size: 18,
-                      color: AppTheme.successGreen,
-                    ),
-                  ],
-                ),
-              ),
+              _buildPaymentMethodSelector(cart),
 
               const SizedBox(height: 24),
 
@@ -1010,7 +1118,7 @@ class _CartScreenState extends State<CartScreen> {
                           ),
                         ),
                         Text(
-                          'A\$${cart.totalAmount.toStringAsFixed(2)}',
+                          '\$${cart.totalAmount.toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
@@ -1066,7 +1174,7 @@ class _CartScreenState extends State<CartScreen> {
                         ),
                       )
                     : Text(
-                        'Place Order  \u00B7  A\$${cart.totalAmount.toStringAsFixed(2)}',
+                        'Place Order  \u00B7  \$${cart.totalAmount.toStringAsFixed(2)}',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -1173,7 +1281,7 @@ class _CartItemCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'A\$${(item.price * item.quantity).toStringAsFixed(2)}',
+                  '\$${(item.price * item.quantity).toStringAsFixed(2)}',
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -1464,8 +1572,8 @@ class _PriceRow extends StatelessWidget {
         ),
         Text(
           isDiscount
-              ? '-A\$${amount.abs().toStringAsFixed(2)}'
-              : 'A\$${amount.toStringAsFixed(2)}',
+              ? '-\$${amount.abs().toStringAsFixed(2)}'
+              : '\$${amount.toStringAsFixed(2)}',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,

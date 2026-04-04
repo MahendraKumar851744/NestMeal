@@ -17,4 +17,7 @@ class ApiConfig {
   static const String followingUrl = '$baseUrl/accounts/me/following';
   static const String storiesUrl = '$baseUrl/stories';
   static const String walletTopUpUrl = '$baseUrl/payments/wallet/top-up';
+
+  static String orderMessagesUrl(String orderId) =>
+      '$ordersUrl/$orderId/messages/';
 }

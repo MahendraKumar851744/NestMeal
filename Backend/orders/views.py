@@ -7,13 +7,15 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.permissions import IsCook, IsCustomer, IsAdmin
-from orders.models import Order, OrderItem
+from orders.models import Order, OrderItem, OrderMessage
 from orders.serializers import (
     OrderSerializer,
     OrderListSerializer,
     OrderCreateSerializer,
     OrderStatusUpdateSerializer,
     OrderCancelSerializer,
+    OrderMessageSerializer,
+    OrderMessageCreateSerializer,
 )
 
 
@@ -289,6 +291,71 @@ class OrderViewSet(viewsets.GenericViewSet):
             'today_revenue': str(today_revenue),
             'pending_orders': pending_orders,
         })
+
+    # ── Chat ─────────────────────────────────────────────────────────────────
+
+    def _get_order_for_chat(self, request, pk):
+        """Return the order if the requester is the customer or the cook."""
+        try:
+            order = Order.objects.get(pk=pk)
+        except Order.DoesNotExist:
+            return None, Response(
+                {'detail': 'Order not found.'}, status=status.HTTP_404_NOT_FOUND
+            )
+        user = request.user
+        is_customer = order.customer == user
+        is_cook = (
+            hasattr(user, 'cook_profile') and order.cook == user.cook_profile
+        )
+        if not (is_customer or is_cook):
+            return None, Response(
+                {'detail': 'Not authorised.'}, status=status.HTTP_403_FORBIDDEN
+            )
+        return order, None
+
+    @action(detail=True, methods=['get', 'post'], url_path='messages',
+            permission_classes=[IsAuthenticated])
+    def messages(self, request, pk=None):
+        """
+        GET  /orders/{id}/messages/ — fetch all chat messages.
+        POST /orders/{id}/messages/ — send a chat message.
+        """
+        order, err = self._get_order_for_chat(request, pk)
+        if err:
+            return err
+
+        if request.method == 'GET':
+            msgs = order.messages.select_related('sender').all()
+            serializer = OrderMessageSerializer(
+                msgs, many=True, context={'request': request}
+            )
+            return Response(serializer.data)
+
+        # POST
+        closed_statuses = {'completed', 'cancelled', 'rejected'}
+        if order.status in closed_statuses:
+            return Response(
+                {'detail': 'Chat is closed for this order.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = OrderMessageCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        is_cook = (
+            hasattr(user, 'cook_profile') and order.cook == user.cook_profile
+        )
+        msg = OrderMessage.objects.create(
+            order=order,
+            sender=user,
+            sender_role='cook' if is_cook else 'customer',
+            message=serializer.validated_data['message'],
+        )
+        return Response(
+            OrderMessageSerializer(msg, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class OrderStatsView(generics.GenericAPIView):

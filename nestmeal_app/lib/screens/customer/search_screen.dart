@@ -319,7 +319,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           ),
                         if (_priceRange.start > 0 || _priceRange.end < 500)
                           _buildFilterChip(
-                            'A\$${_priceRange.start.toInt()} - A\$${_priceRange.end.toInt()}',
+                            '\$${_priceRange.start.toInt()} - \$${_priceRange.end.toInt()}',
                             () {
                               setState(() => _priceRange = const RangeValues(0, 500));
                               _performSearch();
@@ -510,11 +510,11 @@ class _SearchScreenState extends State<SearchScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'A\$${_priceRange.start.toInt()}',
+                '\$${_priceRange.start.toInt()}',
                 style: const TextStyle(fontSize: 12, color: AppTheme.greyText),
               ),
               Text(
-                'A\$${_priceRange.end.toInt()}',
+                '\$${_priceRange.end.toInt()}',
                 style: const TextStyle(fontSize: 12, color: AppTheme.greyText),
               ),
             ],
@@ -706,7 +706,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     children: [
                       if (hasDiscount) ...[
                         Text(
-                          'A\$${meal.price.toStringAsFixed(0)}',
+                          '\$${meal.price.toStringAsFixed(0)}',
                           style: const TextStyle(
                             fontSize: 12,
                             color: AppTheme.greyText,
@@ -716,7 +716,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         const SizedBox(width: 4),
                       ],
                       Text(
-                        'A\$${meal.effectivePrice.toStringAsFixed(0)}',
+                        '\$${meal.effectivePrice.toStringAsFixed(0)}',
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,

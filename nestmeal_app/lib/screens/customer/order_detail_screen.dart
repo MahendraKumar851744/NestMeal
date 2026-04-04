@@ -8,6 +8,7 @@ import '../../models/order_model.dart';
 import '../../providers/order_provider.dart';
 import '../../providers/review_provider.dart';
 import '../../widgets/status_badge.dart';
+import '../shared/order_chat_screen.dart';
 import 'cook_profile_screen.dart';
 
 class OrderDetailScreen extends StatefulWidget {
@@ -34,64 +35,91 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFF8F0),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFFFF8F0),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Order Details',
-          style: GoogleFonts.playfairDisplay(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: Colors.black87,
-          ),
-        ),
-        centerTitle: false,
-      ),
-      body: Consumer<OrderProvider>(
-        builder: (context, provider, _) {
-          if (provider.isLoading && provider.selectedOrder == null) {
-            return const Center(
-              child: CircularProgressIndicator(color: Color(0xFFF97316)),
-            );
-          }
+    return Consumer<OrderProvider>(
+      builder: (context, provider, _) {
+        final order = provider.selectedOrder;
+        final isClosed = order != null &&
+            ['completed', 'cancelled', 'rejected'].contains(order.status);
 
-          if (provider.error != null && provider.selectedOrder == null) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.error_outline,
-                      size: 56, color: Colors.grey),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Failed to load order details',
-                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: _fetchDetail,
-                    child: const Text('Retry',
-                        style: TextStyle(color: Color(0xFFF97316))),
-                  ),
-                ],
+        return Scaffold(
+          backgroundColor: const Color(0xFFFFF8F0),
+          appBar: AppBar(
+            backgroundColor: const Color(0xFFFFF8F0),
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.black87),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: Text(
+              'Order Details',
+              style: GoogleFonts.playfairDisplay(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
               ),
-            );
-          }
+            ),
+            centerTitle: false,
+            actions: order != null
+                ? [
+                    IconButton(
+                      icon: const Icon(Icons.chat_outlined,
+                          color: Color(0xFFF97316)),
+                      tooltip: 'Chat with cook',
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => OrderChatScreen(
+                            orderId: order.id,
+                            orderNumber: order.orderNumber,
+                            isOrderClosed: isClosed,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ]
+                : null,
+          ),
+          body: Builder(
+            builder: (context) {
+              if (provider.isLoading && provider.selectedOrder == null) {
+                return const Center(
+                  child:
+                      CircularProgressIndicator(color: Color(0xFFF97316)),
+                );
+              }
 
-          final order = provider.selectedOrder;
-          if (order == null) {
-            return const Center(child: Text('Order not found'));
-          }
+              if (provider.error != null && provider.selectedOrder == null) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline,
+                          size: 56, color: Colors.grey),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Failed to load order details',
+                        style:
+                            TextStyle(fontSize: 16, color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: _fetchDetail,
+                        child: const Text('Retry',
+                            style: TextStyle(color: Color(0xFFF97316))),
+                      ),
+                    ],
+                  ),
+                );
+              }
 
-          return _buildContent(order);
-        },
-      ),
+              if (order == null) {
+                return const Center(child: Text('Order not found'));
+              }
+
+              return _buildContent(order);
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -497,7 +525,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${item.quantity} x A\$${item.unitPrice.toStringAsFixed(2)}',
+                          '${item.quantity} x \$${item.unitPrice.toStringAsFixed(2)}',
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey[500],
@@ -507,7 +535,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     ),
                   ),
                   Text(
-                    'A\$${item.lineTotal.toStringAsFixed(2)}',
+                    '\$${item.lineTotal.toStringAsFixed(2)}',
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -554,7 +582,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   ),
                 ),
                 Text(
-                  'A\$${order.totalAmount.toStringAsFixed(2)}',
+                  '\$${order.totalAmount.toStringAsFixed(2)}',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -578,8 +606,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
           Text(
             isDiscount
-                ? '-A\$${amount.abs().toStringAsFixed(2)}'
-                : 'A\$${amount.toStringAsFixed(2)}',
+                ? '-\$${amount.abs().toStringAsFixed(2)}'
+                : '\$${amount.toStringAsFixed(2)}',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,

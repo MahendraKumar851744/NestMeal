@@ -7,6 +7,8 @@ class StoryModel {
   final String createdAt;
   final String expiresAt;
   final bool isViewed;
+  final bool isActive;
+  final int viewCount;
 
   StoryModel({
     required this.id,
@@ -17,7 +19,17 @@ class StoryModel {
     required this.createdAt,
     required this.expiresAt,
     this.isViewed = false,
+    this.isActive = true,
+    this.viewCount = 0,
   });
+
+  bool get isExpired {
+    try {
+      return DateTime.parse(expiresAt).isBefore(DateTime.now());
+    } catch (_) {
+      return false;
+    }
+  }
 
   factory StoryModel.fromJson(Map<String, dynamic> json) {
     return StoryModel(
@@ -29,6 +41,8 @@ class StoryModel {
       createdAt: json['created_at'] ?? '',
       expiresAt: json['expires_at'] ?? '',
       isViewed: json['is_viewed'] ?? false,
+      isActive: json['is_active'] ?? true,
+      viewCount: json['view_count'] ?? 0,
     );
   }
 
@@ -41,6 +55,8 @@ class StoryModel {
         createdAt: createdAt,
         expiresAt: expiresAt,
         isViewed: true,
+        isActive: isActive,
+        viewCount: viewCount,
       );
 }
 

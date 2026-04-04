@@ -97,6 +97,27 @@ class PaymentProvider extends ChangeNotifier {
     }
   }
 
+  /// Pay for an order directly from the wallet (no Stripe).
+  Future<Map<String, dynamic>> payWithWallet(String orderId) async {
+    isLoading = true;
+    error = null;
+    _safeNotify();
+
+    try {
+      final response = await _apiService.post(
+        '${ApiConfig.paymentsUrl}/wallet-pay/',
+        {'order_id': orderId},
+      );
+      return response;
+    } catch (e) {
+      error = e.toString();
+      rethrow;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
   /// Top up the customer's wallet balance.
   Future<Map<String, dynamic>> topUpWallet(double amount) async {
     isLoading = true;

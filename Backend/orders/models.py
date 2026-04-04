@@ -127,6 +127,36 @@ class Order(models.Model):
         return f"HB-{code}"
 
 
+class OrderMessage(models.Model):
+    SENDER_ROLE_CHOICES = [
+        ('customer', 'Customer'),
+        ('cook', 'Cook'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='order_messages')
+    sender_role = models.CharField(max_length=10, choices=SENDER_ROLE_CHOICES)
+    message = models.TextField(max_length=500)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'order_messages'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.sender_role} msg on {self.order.order_number}"
+
+    def save(self, *args, **kwargs):
+        if not self.sender_role:
+            if hasattr(self.sender, 'cook_profile') and \
+               self.order.cook == self.sender.cook_profile:
+                self.sender_role = 'cook'
+            else:
+                self.sender_role = 'customer'
+        super().save(*args, **kwargs)
+
+
 class OrderItem(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')

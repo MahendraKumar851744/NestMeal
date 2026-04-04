@@ -259,7 +259,7 @@ class MealCard extends StatelessWidget {
                       // Price
                       if (hasDiscount) ...[
                         Text(
-                          'A\$${price.toStringAsFixed(0)}',
+                          '\$${price.toStringAsFixed(0)}',
                           style: TextStyle(
                             fontSize: 12,
                             color: AppTheme.greyText,
@@ -269,7 +269,7 @@ class MealCard extends StatelessWidget {
                         const SizedBox(width: 4),
                       ],
                       Text(
-                        'A\$${displayPrice.toStringAsFixed(0)}',
+                        '\$${displayPrice.toStringAsFixed(0)}',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,

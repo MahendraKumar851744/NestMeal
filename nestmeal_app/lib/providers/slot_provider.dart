@@ -20,6 +20,7 @@ class SlotProvider extends ChangeNotifier {
     scheduleMicrotask(() => notifyListeners());
   }
 
+  /// For customers: only shows available/open slots.
   Future<void> fetchPickupSlots({
     String? cookId,
     String? date,
@@ -56,6 +57,70 @@ class SlotProvider extends ChangeNotifier {
     }
   }
 
+  /// For the cook's management screen: shows ALL their slots (no availability filter).
+  Future<void> fetchCookOwnPickupSlots(String cookId) async {
+    isLoading = true;
+    error = null;
+    _safeNotify();
+
+    try {
+      final url = '${ApiConfig.pickupSlotsUrl}/?cook=$cookId';
+      final response = await _apiService.get(url);
+      final results = response is List ? response : response['results'] as List;
+      pickupSlots =
+          results.map((json) => PickupSlotModel.fromJson(json)).toList();
+    } catch (e) {
+      error = e.toString();
+      rethrow;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// For the cook's management screen: shows ALL their delivery slots.
+  Future<void> fetchCookOwnDeliverySlots(String cookId) async {
+    isLoading = true;
+    error = null;
+    _safeNotify();
+
+    try {
+      final url = '${ApiConfig.deliverySlotsUrl}/?cook=$cookId';
+      final response = await _apiService.get(url);
+      final results = response is List ? response : response['results'] as List;
+      deliverySlots =
+          results.map((json) => DeliverySlotModel.fromJson(json)).toList();
+    } catch (e) {
+      error = e.toString();
+      rethrow;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteSlot({
+    required String slotType,
+    required String slotId,
+  }) async {
+    try {
+      final url = slotType == 'pickup'
+          ? '${ApiConfig.pickupSlotsUrl}/$slotId/'
+          : '${ApiConfig.deliverySlotsUrl}/$slotId/';
+      await _apiService.delete(url);
+      if (slotType == 'pickup') {
+        pickupSlots.removeWhere((s) => s.id == slotId);
+      } else {
+        deliverySlots.removeWhere((s) => s.id == slotId);
+      }
+      notifyListeners();
+    } catch (e) {
+      error = e.toString();
+      rethrow;
+    }
+  }
+
+  /// For customers: only shows available delivery slots.
   Future<void> fetchDeliverySlots({
     String? cookId,
     String? date,

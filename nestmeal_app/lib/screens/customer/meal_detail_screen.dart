@@ -1303,20 +1303,19 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
     if (mounted) setState(() => _loadingCookMeals = false);
   }
 
-  void _addToCart(MealDetail meal) {
+  void _addToCart(MealDetail meal, double totalPrice) {
     final cart = context.read<CartProvider>();
     final imageUrl =
         meal.images.isNotEmpty ? meal.images.first.imageUrl : null;
 
-    // Note: Depending on your CartProvider, you may want to pass 
-    // the _selectedExtraIds here in the future!
     final added = cart.addItem(
       meal.id,
       meal.title,
       imageUrl,
-      meal.effectivePrice,
+      totalPrice,
       meal.cookId,
       meal.cookDisplayName,
+      fulfillmentModes: meal.fulfillmentModes,
     );
 
     if (!added) {
@@ -1340,9 +1339,10 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                   meal.id,
                   meal.title,
                   imageUrl,
-                  meal.effectivePrice,
+                  totalPrice,
                   meal.cookId,
                   meal.cookDisplayName,
+                  fulfillmentModes: meal.fulfillmentModes,
                 );
                 Navigator.pop(ctx);
                 _showAddedSnackbar();
@@ -2415,7 +2415,7 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                     height: 52,
                     child: ElevatedButton(
                       onPressed: unavailabilityReason == null
-                          ? () => _addToCart(meal)
+                          ? () => _addToCart(meal, totalPrice)
                           : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryOrange,

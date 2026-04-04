@@ -24,7 +24,9 @@ class CartProvider extends ChangeNotifier {
   List<CartItem> items = [];
   String? selectedCookId;
   String? cookDisplayName;
+  List<String> supportedFulfillmentModes = [];
   String fulfillmentType = 'pickup';
+  String selectedPaymentMethod = 'card'; // 'card' or 'wallet'
   String? selectedSlotId;
   String? couponCode;
   double discountAmount = 0;
@@ -62,8 +64,9 @@ class CartProvider extends ChangeNotifier {
     String? imageUrl,
     double price,
     String cookId,
-    String cookDisplayName,
-  ) {
+    String cookDisplayName, {
+    List<String> fulfillmentModes = const ['pickup', 'delivery'],
+  }) {
     // Check if adding from a different cook
     if (selectedCookId != null && selectedCookId != cookId && items.isNotEmpty) {
       return false;
@@ -71,6 +74,15 @@ class CartProvider extends ChangeNotifier {
 
     selectedCookId = cookId;
     this.cookDisplayName = cookDisplayName;
+
+    // Set supported modes from the meal; auto-select first supported mode
+    supportedFulfillmentModes = fulfillmentModes.isNotEmpty
+        ? fulfillmentModes
+        : ['pickup', 'delivery'];
+    if (!supportedFulfillmentModes.contains(fulfillmentType)) {
+      fulfillmentType = supportedFulfillmentModes.first;
+      selectedSlotId = null;
+    }
 
     final existingIndex = items.indexWhere((item) => item.mealId == mealId);
     if (existingIndex >= 0) {
@@ -112,11 +124,18 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
+  void setPaymentMethod(String method) {
+    selectedPaymentMethod = method;
+    notifyListeners();
+  }
+
   void clearCart() {
     items.clear();
     selectedCookId = null;
     cookDisplayName = null;
+    supportedFulfillmentModes = [];
     fulfillmentType = 'pickup';
+    selectedPaymentMethod = 'card';
     selectedSlotId = null;
     couponCode = null;
     discountAmount = 0;

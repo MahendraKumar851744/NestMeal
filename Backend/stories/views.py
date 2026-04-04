@@ -58,13 +58,19 @@ class StoryDeleteView(generics.DestroyAPIView):
 
 
 class MyStoriesView(generics.ListAPIView):
-    """GET /stories/my/ -- cook's own active stories."""
+    """GET /stories/my/ -- cook's own stories (all, including expired) for management."""
 
     serializer_class = StorySerializer
     permission_classes = [IsAuthenticated, IsCook]
 
     def get_queryset(self):
-        return _active_stories_qs().filter(cook=self.request.user.cook_profile)
+        return (
+            Story.objects
+            .select_related('cook')
+            .prefetch_related('views')
+            .filter(cook=self.request.user.cook_profile)
+            .order_by('-created_at')
+        )
 
 
 class MarkStoryViewedView(generics.GenericAPIView):

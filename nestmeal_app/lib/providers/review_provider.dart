@@ -114,7 +114,7 @@ class ReviewProvider extends ChangeNotifier {
     try {
       await _apiService.patch(
         '${ApiConfig.reviewsUrl}/$id/reply/',
-        {'reply': reply},
+        {'cook_reply': reply},
       );
     } catch (e) {
       error = e.toString();

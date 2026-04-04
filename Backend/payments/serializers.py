@@ -24,15 +24,6 @@ class PaymentCreateSerializer(serializers.Serializer):
     method = serializers.ChoiceField(choices=Payment.METHOD_CHOICES, default='card')
     gateway = serializers.CharField(max_length=50, default='stripe')
 
-
-class PaymentIntentResponseSerializer(serializers.Serializer):
-    payment_id = serializers.UUIDField()
-    client_secret = serializers.CharField()
-    stripe_payment_intent_id = serializers.CharField()
-    publishable_key = serializers.CharField()
-    amount = serializers.FloatField()
-    currency = serializers.CharField()
-
     def validate_order_id(self, value):
         from orders.models import Order
         try:
@@ -43,10 +34,17 @@ class PaymentIntentResponseSerializer(serializers.Serializer):
             raise serializers.ValidationError("You can only pay for your own orders.")
         if order.payment_status == 'paid':
             raise serializers.ValidationError("This order has already been paid.")
-        if hasattr(order, 'payment') and order.payment.status == 'success':
-            raise serializers.ValidationError("A successful payment already exists for this order.")
         self.context['order'] = order
         return value
+
+
+class PaymentIntentResponseSerializer(serializers.Serializer):
+    payment_id = serializers.UUIDField()
+    client_secret = serializers.CharField()
+    stripe_payment_intent_id = serializers.CharField()
+    publishable_key = serializers.CharField()
+    amount = serializers.FloatField()
+    currency = serializers.CharField()
 
 
 class CookPayoutSerializer(serializers.ModelSerializer):

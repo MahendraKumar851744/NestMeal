@@ -18,6 +18,7 @@ import 'providers/payment_provider.dart';
 import 'providers/address_provider.dart';
 import 'providers/cook_provider.dart';
 import 'providers/story_provider.dart';
+import 'providers/chat_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/otp_verification_screen.dart';
 import 'screens/customer/customer_shell.dart';
@@ -77,6 +78,9 @@ class NestMealApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => StoryProvider(apiService),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => ChatProvider(apiService),
         ),
         ChangeNotifierProvider(
           create: (_) => AdminProvider(apiService),

@@ -165,15 +165,19 @@ class PickupSlotViewSet(viewsets.ModelViewSet):
         from django.utils import timezone
 
         qs = PickupSlot.objects.select_related('cook').all()
+
+        # Authenticated cooks see all their own slots (no date filter)
+        if (self.request.user.is_authenticated
+                and self.request.user.role == 'cook'):
+            try:
+                return qs.filter(cook=self.request.user.cook_profile)
+            except Exception:
+                return qs.none()
+
+        # Public / customer list: only future available slots
         if self.action in ('list', 'retrieve'):
-            # Public views: only show future, available slots
             qs = qs.filter(date__gte=timezone.now().date())
-        else:
-            if self.request.user.is_authenticated and self.request.user.role == 'cook':
-                try:
-                    qs = qs.filter(cook=self.request.user.cook_profile)
-                except Exception:
-                    qs = qs.none()
+
         return qs
 
     def perform_create(self, serializer):

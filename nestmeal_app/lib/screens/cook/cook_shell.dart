@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'package:nestmeal_app/config/theme.dart';
 import 'package:nestmeal_app/screens/cook/cook_dashboard_screen.dart';
-import 'package:nestmeal_app/screens/cook/add_meal_screen.dart';
+import 'package:nestmeal_app/screens/cook/cook_meals_screen.dart';
 import 'package:nestmeal_app/screens/cook/cook_orders_screen.dart';
 import 'package:nestmeal_app/screens/cook/cook_profile_edit_screen.dart';
-import 'package:nestmeal_app/screens/cook/story_upload_screen.dart';
 
 class CookShell extends StatefulWidget {
   const CookShell({super.key});
@@ -19,7 +18,7 @@ class _CookShellState extends State<CookShell> {
 
   final List<Widget> _screens = const [
     CookDashboardScreen(),
-    AddMealScreen(),
+    CookMealsScreen(),
     CookOrdersScreen(),
     CookProfileEditScreen(),
   ];
@@ -39,16 +38,6 @@ class _CookShellState extends State<CookShell> {
           index: _currentIndex,
           children: _screens,
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const StoryUploadScreen()),
-            );
-          },
-          backgroundColor: AppTheme.primaryOrange,
-          child: const Icon(Icons.camera_alt, color: Colors.white),
-        ),
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: (index) => setState(() => _currentIndex = index),
@@ -62,9 +51,9 @@ class _CookShellState extends State<CookShell> {
               label: 'Dashboard',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.add_circle_outline),
-              activeIcon: Icon(Icons.add_circle),
-              label: 'Add Meal',
+              icon: Icon(Icons.restaurant_menu_outlined),
+              activeIcon: Icon(Icons.restaurant_menu),
+              label: 'Meals',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.receipt_long_outlined),

@@ -7,9 +7,11 @@ import 'package:provider/provider.dart';
 import 'package:nestmeal_app/config/theme.dart';
 import 'package:nestmeal_app/providers/auth_provider.dart';
 import 'package:nestmeal_app/services/api_service.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:nestmeal_app/screens/customer/customer_shell.dart';
 import 'package:nestmeal_app/screens/cook/cook_shell.dart';
 import 'package:nestmeal_app/screens/admin/admin_dashboard_screen.dart';
+import 'package:nestmeal_app/screens/common/location_permission_screen.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   final String phone;
@@ -142,21 +144,31 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     }
   }
 
-  void _navigateByRole(AuthProvider authProvider) {
-    Widget destination;
-
+  Future<void> _navigateByRole(AuthProvider authProvider) async {
     if (authProvider.isCook) {
-      destination = const CookShell();
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const CookShell()),
+        (route) => false,
+      );
     } else if (authProvider.isAdmin) {
-      destination = const AdminDashboardScreen();
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+        (route) => false,
+      );
     } else {
-      destination = const CustomerShell();
+      // Customer — show location permission screen only if not already granted
+      final permission = await Geolocator.checkPermission();
+      final alreadyGranted = permission == LocationPermission.always ||
+          permission == LocationPermission.whileInUse;
+      final Widget destination = alreadyGranted
+          ? const CustomerShell()
+          : LocationPermissionScreen(destination: const CustomerShell());
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => destination),
+        (route) => false,
+      );
     }
-
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => destination),
-      (route) => false,
-    );
   }
 
   void _onDigitChanged(int index, String value) {

@@ -7,7 +7,32 @@ from accounts.models import CookProfile
 from coupons.models import Coupon, CouponUsage
 from delivery.models import DeliverySlot
 from meals.models import Meal, PickupSlot
-from orders.models import Order, OrderItem
+from orders.models import Order, OrderItem, OrderMessage
+
+
+# ---------------------------------------------------------------------------
+# Chat serializers
+# ---------------------------------------------------------------------------
+
+class OrderMessageSerializer(serializers.ModelSerializer):
+    sender_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OrderMessage
+        fields = ['id', 'sender', 'sender_name', 'sender_role', 'message', 'created_at']
+        read_only_fields = ['id', 'sender', 'sender_name', 'sender_role', 'created_at']
+
+    def get_sender_name(self, obj):
+        if obj.sender_role == 'cook':
+            try:
+                return obj.sender.cook_profile.display_name
+            except Exception:
+                pass
+        return obj.sender.full_name or obj.sender.email
+
+
+class OrderMessageCreateSerializer(serializers.Serializer):
+    message = serializers.CharField(max_length=500, allow_blank=False)
 
 
 # ---------------------------------------------------------------------------

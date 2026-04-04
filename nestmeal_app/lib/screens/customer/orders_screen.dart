@@ -314,7 +314,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       StatusBadge(status: item.status),
                       const SizedBox(height: 8),
                       Text(
-                        'A\$${item.totalAmount.toStringAsFixed(2)}',
+                        '\$${item.totalAmount.toStringAsFixed(2)}',
                         style: const TextStyle(
                           color: Color(0xFFF97316),
                           fontWeight: FontWeight.w700,

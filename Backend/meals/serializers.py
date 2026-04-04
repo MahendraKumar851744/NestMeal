@@ -223,15 +223,6 @@ class MealCreateUpdateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     'You can only edit your own meals.',
                 )
-                
-        # <-- ADDED: Ensure the cook owns the assigned pickup locations
-        if 'pickup_locations' in attrs:
-            for loc in attrs['pickup_locations']:
-                if loc.cook_id != cook_profile.id:
-                    raise serializers.ValidationError(
-                        {'pickup_locations': 'You can only assign your own pickup locations.'}
-                    )
-                    
         return attrs
 
     # --- create / update ----------------------------------------------------

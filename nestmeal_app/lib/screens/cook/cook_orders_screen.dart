@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import 'package:nestmeal_app/config/theme.dart';
+import 'package:nestmeal_app/models/order_model.dart';
 import 'package:nestmeal_app/providers/order_provider.dart';
 import 'package:nestmeal_app/widgets/status_badge.dart';
+import 'cook_order_detail_screen.dart';
 
 class CookOrdersScreen extends StatefulWidget {
   const CookOrdersScreen({super.key});
@@ -13,11 +18,32 @@ class CookOrdersScreen extends StatefulWidget {
   State<CookOrdersScreen> createState() => _CookOrdersScreenState();
 }
 
-class _CookOrdersScreenState extends State<CookOrdersScreen> {
+class _CookOrdersScreenState extends State<CookOrdersScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  static const _activeStatuses = [
+    'placed',
+    'accepted',
+    'preparing',
+    'ready_for_pickup',
+    'picked_up',
+    'out_for_delivery',
+    'delivered',
+  ];
+  static const _historyStatuses = ['completed', 'cancelled', 'rejected'];
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadOrders());
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadOrders() async {
@@ -26,418 +52,352 @@ class _CookOrdersScreenState extends State<CookOrdersScreen> {
     } catch (_) {}
   }
 
-  Future<void> _updateStatus(String orderId, String newStatus) async {
-    try {
-      await context.read<OrderProvider>().updateOrderStatus(orderId, newStatus);
-      await _loadOrders();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-          backgroundColor: AppTheme.errorRed,
-        ),
-      );
-    }
-  }
-
-  Future<void> _showPickupVerificationDialog(String orderId) async {
-    final codeController = TextEditingController();
-
-    final result = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Verify Pickup'),
-        content: TextField(
-          controller: codeController,
-          decoration: const InputDecoration(
-            labelText: 'Pickup Code',
-            hintText: 'Enter the customer\'s pickup code',
-          ),
-          keyboardType: TextInputType.number,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, codeController.text.trim()),
-            child: const Text('Verify'),
-          ),
-        ],
-      ),
-    );
-
-    if (result != null && result.isNotEmpty) {
-      try {
-        await context.read<OrderProvider>().verifyPickup(orderId, result);
-        await _loadOrders();
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Pickup verified successfully!'),
-            backgroundColor: AppTheme.successGreen,
-          ),
-        );
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: AppTheme.errorRed,
-          ),
-        );
-      }
-    }
+  List<OrderListItem> _filtered(
+      List<OrderListItem> orders, List<String> statuses) {
+    return orders.where((o) => statuses.contains(o.status)).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final orderProvider = context.watch<OrderProvider>();
-
     return Scaffold(
       backgroundColor: AppTheme.warmCream,
       appBar: AppBar(
-        title: Text(
-          'Order Management',
-          style: GoogleFonts.playfairDisplay(fontWeight: FontWeight.w600),
-        ),
         backgroundColor: AppTheme.warmCream,
         elevation: 0,
+        title: Text(
+          'Orders',
+          style: GoogleFonts.playfairDisplay(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.darkText,
+          ),
+        ),
+        centerTitle: false,
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: AppTheme.primaryOrange,
+          unselectedLabelColor: AppTheme.greyText,
+          indicatorColor: AppTheme.primaryOrange,
+          indicatorWeight: 2.5,
+          labelStyle:
+              const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          tabs: const [
+            Tab(text: 'Active'),
+            Tab(text: 'History'),
+          ],
+        ),
       ),
-      body: RefreshIndicator(
-        color: AppTheme.primaryOrange,
+      body: Consumer<OrderProvider>(
+        builder: (context, provider, _) {
+          if (provider.isLoading && provider.orders.isEmpty) {
+            return const Center(
+              child: CircularProgressIndicator(
+                  color: AppTheme.primaryOrange),
+            );
+          }
+
+          final active = _filtered(provider.orders, _activeStatuses);
+          final history = _filtered(provider.orders, _historyStatuses);
+
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              _buildList(active, provider, isActive: true),
+              _buildList(history, provider, isActive: false),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildList(
+      List<OrderListItem> orders, OrderProvider provider,
+      {required bool isActive}) {
+    if (orders.isEmpty) {
+      return RefreshIndicator(
         onRefresh: _loadOrders,
-        child: orderProvider.isLoading && orderProvider.orders.isEmpty
-            ? const Center(child: CircularProgressIndicator())
-            : orderProvider.orders.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.receipt_long,
-                            size: 64, color: AppTheme.greyText),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No orders yet',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.greyText,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: orderProvider.orders.length,
-                    itemBuilder: (context, index) {
-                      final order = orderProvider.orders[index];
-                      return _buildOrderCard(order);
-                    },
-                  ),
-      ),
-    );
-  }
-
-  Widget _buildOrderCard(dynamic order) {
-    final status = order.status;
-    final isActiveOrder = [
-      'placed',
-      'accepted',
-      'preparing',
-      'ready_for_pickup',
-      'picked_up',
-      'out_for_delivery',
-      'delivered',
-    ].contains(status);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Order header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '#${order.orderNumber}',
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              StatusBadge(status: status),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Order details
-          Row(
-            children: [
-              Icon(Icons.restaurant, size: 16, color: AppTheme.greyText),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  order.cookDisplayName,
-                  style: TextStyle(fontSize: 13, color: AppTheme.greyText),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Text(
-                'A\$${order.totalAmount.toStringAsFixed(0)}',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.primaryOrange,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Icon(
-                order.fulfillmentType == 'pickup'
-                    ? Icons.store_outlined
-                    : Icons.delivery_dining,
-                size: 16,
-                color: AppTheme.greyText,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                order.fulfillmentType == 'pickup' ? 'Pickup' : 'Delivery',
-                style: TextStyle(fontSize: 13, color: AppTheme.greyText),
-              ),
-            ],
-          ),
-
-          // Acceptance deadline countdown for placed orders
-          if (status == 'placed' && order.acceptanceDeadline != null) ...[
-            const SizedBox(height: 8),
-            _AcceptanceCountdown(deadline: order.acceptanceDeadline!),
-          ],
-
-          // Action buttons for active orders
-          if (isActiveOrder) ...[
-            const SizedBox(height: 12),
-            const Divider(),
-            const SizedBox(height: 8),
-            _buildActionButtons(order.id, status, order.fulfillmentType),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButtons(
-      String orderId, String status, String fulfillmentType) {
-    switch (status) {
-      case 'placed':
-        return Column(
+        color: AppTheme.primaryOrange,
+        child: ListView(
           children: [
             SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => _updateStatus(orderId, 'preparing'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.successGreen,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: const Text('Accept & Start Preparing'),
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => _updateStatus(orderId, 'rejected'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppTheme.errorRed,
-                  side: const BorderSide(color: AppTheme.errorRed),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: const Text('Reject'),
+              height: MediaQuery.of(context).size.height * 0.5,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    isActive
+                        ? Icons.receipt_long_outlined
+                        : Icons.history,
+                    size: 64,
+                    color: AppTheme.greyText.withValues(alpha: 0.4),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    isActive ? 'No active orders' : 'No order history',
+                    style: GoogleFonts.playfairDisplay(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.greyText,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    isActive
+                        ? 'New orders will appear here'
+                        : 'Completed and cancelled orders will appear here',
+                    style: TextStyle(
+                        fontSize: 13, color: AppTheme.greyText),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             ),
           ],
-        );
-
-      case 'accepted':
-        return SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: () => _updateStatus(orderId, 'preparing'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryOrange,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-            child: const Text('Mark Preparing'),
-          ),
-        );
-
-      case 'preparing':
-        if (fulfillmentType == 'delivery') {
-          return SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => _updateStatus(orderId, 'out_for_delivery'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-              child: const Text('Out for Delivery'),
-            ),
-          );
-        } else {
-          return SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => _updateStatus(orderId, 'ready_for_pickup'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryOrange,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-              child: const Text('Mark Ready for Pickup'),
-            ),
-          );
-        }
-
-      case 'ready_for_pickup':
-        return SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: () => _showPickupVerificationDialog(orderId),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.successGreen,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-            child: const Text('Verify Pickup'),
-          ),
-        );
-
-      case 'out_for_delivery':
-        return SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: () => _updateStatus(orderId, 'delivered'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.successGreen,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-            child: const Text('Mark Delivered'),
-          ),
-        );
-
-      case 'picked_up':
-        return SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: () => _updateStatus(orderId, 'completed'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.successGreen,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-            child: const Text('Mark Completed'),
-          ),
-        );
-
-      case 'delivered':
-        return SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: () => _updateStatus(orderId, 'completed'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.successGreen,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-            child: const Text('Mark Completed'),
-          ),
-        );
-
-      default:
-        return const SizedBox.shrink();
+        ),
+      );
     }
+
+    return RefreshIndicator(
+      onRefresh: _loadOrders,
+      color: AppTheme.primaryOrange,
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        itemCount: orders.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (ctx, i) => _OrderCard(
+          order: orders[i],
+          onTap: () async {
+            await Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) =>
+                    CookOrderDetailScreen(orderId: orders[i].id),
+              ),
+            );
+            _loadOrders();
+          },
+        ),
+      ),
+    );
   }
 }
 
-class _AcceptanceCountdown extends StatefulWidget {
-  final String deadline;
-  const _AcceptanceCountdown({required this.deadline});
+// ─── Order Card ──────────────────────────────────────────────────────────────
+
+class _OrderCard extends StatelessWidget {
+  final OrderListItem order;
+  final VoidCallback onTap;
+
+  const _OrderCard({required this.order, required this.onTap});
 
   @override
-  State<_AcceptanceCountdown> createState() => _AcceptanceCountdownState();
+  Widget build(BuildContext context) {
+    final isPickup = order.fulfillmentType == 'pickup';
+    final isNew = order.status == 'placed';
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: isNew
+              ? Border.all(
+                  color: AppTheme.primaryOrange.withValues(alpha: 0.5),
+                  width: 1.5)
+              : null,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                // Order number + new badge
+                if (isNew)
+                  Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryOrange,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      'NEW',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                Text(
+                  '#${order.orderNumber}',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const Spacer(),
+                StatusBadge(status: order.status),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                // Fulfillment type
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(7),
+                    border: Border.all(
+                      color: isPickup
+                          ? AppTheme.primaryOrange.withValues(alpha: 0.5)
+                          : Colors.blue.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isPickup
+                            ? Icons.store_outlined
+                            : Icons.delivery_dining_outlined,
+                        size: 13,
+                        color: isPickup
+                            ? AppTheme.primaryOrange
+                            : Colors.blue.shade700,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isPickup ? 'Pickup' : 'Delivery',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: isPickup
+                              ? AppTheme.primaryOrange
+                              : Colors.blue.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Time
+                Icon(Icons.access_time,
+                    size: 13, color: AppTheme.greyText),
+                const SizedBox(width: 4),
+                _TimeAgo(createdAt: order.createdAt),
+                const Spacer(),
+                // Amount
+                Text(
+                  '\$${order.totalAmount.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.primaryOrange,
+                  ),
+                ),
+              ],
+            ),
+            // Acceptance countdown for placed orders
+            if (order.status == 'placed') ...[
+              const SizedBox(height: 8),
+              const _NewOrderPrompt(),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _AcceptanceCountdownState extends State<_AcceptanceCountdown> {
-  late DateTime _deadline;
-  late Duration _remaining;
+// ─── Smart time display ───────────────────────────────────────────────────────
+
+class _TimeAgo extends StatefulWidget {
+  final String createdAt;
+  const _TimeAgo({required this.createdAt});
+
+  @override
+  State<_TimeAgo> createState() => _TimeAgoState();
+}
+
+class _TimeAgoState extends State<_TimeAgo> {
+  late DateTime _createdAt;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _deadline = DateTime.parse(widget.deadline).toLocal();
-    _remaining = _deadline.difference(DateTime.now());
-    _tick();
-  }
-
-  void _tick() {
-    if (!mounted) return;
-    Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      setState(() {
-        _remaining = _deadline.difference(DateTime.now());
-      });
-      if (_remaining.inSeconds > 0) _tick();
+    try {
+      _createdAt = DateTime.parse(widget.createdAt).toLocal();
+    } catch (_) {
+      _createdAt = DateTime.now();
+    }
+    // Refresh every minute while within the "X mins ago" window
+    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
     });
   }
 
   @override
-  Widget build(BuildContext context) {
-    final isExpired = _remaining.inSeconds <= 0;
-    final mins = _remaining.inMinutes;
-    final secs = _remaining.inSeconds % 60;
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
+  String _format() {
+    final diff = DateTime.now().difference(_createdAt);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return DateFormat('MMM d, h:mm a').format(_createdAt);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      _format(),
+      style: TextStyle(fontSize: 12, color: AppTheme.greyText),
+    );
+  }
+}
+
+// ─── Prompt shown on new "placed" orders ─────────────────────────────────────
+
+class _NewOrderPrompt extends StatelessWidget {
+  const _NewOrderPrompt();
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: isExpired
-            ? AppTheme.errorRed.withValues(alpha: 0.1)
-            : AppTheme.primaryOrange.withValues(alpha: 0.1),
+        color: AppTheme.primaryOrange.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.timer_outlined,
-            size: 16,
-            color: isExpired ? AppTheme.errorRed : AppTheme.primaryOrange,
-          ),
+          const Icon(Icons.touch_app_outlined,
+              size: 14, color: AppTheme.primaryOrange),
           const SizedBox(width: 6),
           Text(
-            isExpired
-                ? 'Acceptance window expired'
-                : 'Accept within ${mins}m ${secs.toString().padLeft(2, '0')}s',
+            'Tap to accept or reject',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: isExpired ? AppTheme.errorRed : AppTheme.primaryOrange,
+              color: AppTheme.primaryOrange,
             ),
           ),
         ],

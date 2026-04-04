@@ -37,10 +37,58 @@ class _SlotManagementScreenState extends State<SlotManagementScreen>
     final slotProvider = context.read<SlotProvider>();
     try {
       await Future.wait([
-        slotProvider.fetchPickupSlots(cookId: cookId),
-        slotProvider.fetchDeliverySlots(cookId: cookId),
+        slotProvider.fetchCookOwnPickupSlots(cookId),
+        slotProvider.fetchCookOwnDeliverySlots(cookId),
       ]);
     } catch (_) {}
+  }
+
+  Future<void> _confirmDeleteSlot(String slotType, String slotId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Slot?'),
+        content: const Text('This slot will be permanently deleted.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: TextStyle(color: AppTheme.greyText)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.errorRed,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await context.read<SlotProvider>().deleteSlot(
+            slotType: slotType,
+            slotId: slotId,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Slot deleted'),
+          backgroundColor: AppTheme.successGreen,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: AppTheme.errorRed,
+        ),
+      );
+    }
   }
 
   Future<void> _showAddSlotDialog(String slotType) async {
@@ -246,6 +294,7 @@ class _SlotManagementScreenState extends State<SlotManagementScreen>
                         itemBuilder: (ctx, i) {
                           final slot = slotProvider.pickupSlots[i];
                           return _buildSlotCard(
+                            slotId: slot.id,
                             date: slot.date,
                             startTime: slot.startTime,
                             endTime: slot.endTime,
@@ -272,6 +321,7 @@ class _SlotManagementScreenState extends State<SlotManagementScreen>
                         itemBuilder: (ctx, i) {
                           final slot = slotProvider.deliverySlots[i];
                           return _buildSlotCard(
+                            slotId: slot.id,
                             date: slot.date,
                             startTime: slot.startTime,
                             endTime: slot.endTime,
@@ -307,6 +357,7 @@ class _SlotManagementScreenState extends State<SlotManagementScreen>
   }
 
   Widget _buildSlotCard({
+    required String slotId,
     required String date,
     required String startTime,
     required String endTime,
@@ -380,20 +431,36 @@ class _SlotManagementScreenState extends State<SlotManagementScreen>
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              status[0].toUpperCase() + status.substring(1),
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: statusColor,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  status[0].toUpperCase() + status.substring(1),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: statusColor,
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(height: 6),
+              GestureDetector(
+                onTap: () => _confirmDeleteSlot(
+                    type == 'Pickup' ? 'pickup' : 'delivery', slotId),
+                child: const Icon(
+                  Icons.delete_outline,
+                  size: 20,
+                  color: AppTheme.errorRed,
+                ),
+              ),
+            ],
           ),
         ],
       ),

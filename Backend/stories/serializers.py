@@ -7,6 +7,7 @@ class StorySerializer(serializers.ModelSerializer):
     cook_display_name = serializers.CharField(source='cook.display_name', read_only=True)
     image_url = serializers.SerializerMethodField()
     is_viewed = serializers.SerializerMethodField()
+    view_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Story
@@ -14,7 +15,7 @@ class StorySerializer(serializers.ModelSerializer):
             'id', 'cook_id', 'cook_display_name',
             'image_url', 'caption',
             'created_at', 'expires_at', 'is_active',
-            'is_viewed',
+            'is_viewed', 'view_count',
         ]
         read_only_fields = ['id', 'created_at', 'expires_at', 'is_active']
 
@@ -29,6 +30,9 @@ class StorySerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return StoryView.objects.filter(story=obj, customer=request.user).exists()
         return False
+
+    def get_view_count(self, obj):
+        return obj.views.count()
 
 
 class StoryCreateSerializer(serializers.ModelSerializer):
