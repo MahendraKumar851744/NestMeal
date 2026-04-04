@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import 'auth_service.dart';
@@ -196,6 +197,44 @@ class ApiService {
           request.headers['Authorization'] = 'Bearer $newToken';
         }
         request.files.add(await http.MultipartFile.fromPath(fieldName, filePath));
+        if (fields != null) {
+          request.fields.addAll(fields);
+        }
+        streamedResponse = await _client.send(request);
+        response = await http.Response.fromStream(streamedResponse);
+      } else {
+        throw AuthException();
+      }
+    }
+
+    return _handleResponse(response);
+  }
+
+  Future<dynamic> uploadFileBytes(String url, Uint8List bytes, String filename, {String fieldName = 'image', Map<String, String>? fields}) async {
+    final uri = Uri.parse(url);
+    final token = await _authService.getAccessToken();
+
+    var request = http.MultipartRequest('POST', uri);
+    if (token != null && token.isNotEmpty) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+    request.files.add(http.MultipartFile.fromBytes(fieldName, bytes, filename: filename));
+    if (fields != null) {
+      request.fields.addAll(fields);
+    }
+
+    var streamedResponse = await _client.send(request);
+    var response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 401) {
+      final refreshed = await _attemptTokenRefresh();
+      if (refreshed) {
+        final newToken = await _authService.getAccessToken();
+        request = http.MultipartRequest('POST', uri);
+        if (newToken != null && newToken.isNotEmpty) {
+          request.headers['Authorization'] = 'Bearer $newToken';
+        }
+        request.files.add(http.MultipartFile.fromBytes(fieldName, bytes, filename: filename));
         if (fields != null) {
           request.fields.addAll(fields);
         }

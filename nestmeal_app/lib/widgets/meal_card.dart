@@ -15,7 +15,6 @@ class MealCard extends StatelessWidget {
   final bool isAvailable;
   final double? width;
   final int? slotsRemaining;
-  final String? shortDescription;
   final String? mealType;
 
   const MealCard({
@@ -31,7 +30,6 @@ class MealCard extends StatelessWidget {
     this.isAvailable = true,
     this.width,
     this.slotsRemaining,
-    this.shortDescription,
     this.mealType,
   });
 
@@ -227,19 +225,6 @@ class MealCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
 
-                  // Short description
-                  if (shortDescription != null && shortDescription!.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      shortDescription!,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppTheme.greyText,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
                   const SizedBox(height: 8),
 
                   // Rating, distance, price row

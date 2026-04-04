@@ -426,76 +426,6 @@ class _CookProfileScreenState extends State<CookProfileScreen>
                     const SizedBox(height: 20),
                   ],
 
-                  // Pickup Locations
-                  if (cook != null && cook.pickupLocations.isNotEmpty) ...[
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Pickup Locations',
-                        style: GoogleFonts.playfairDisplay(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.darkText,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ...cook.pickupLocations
-                        .where((loc) => loc.isActive)
-                        .map((loc) => Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                                border:
-                                    Border.all(color: AppTheme.lightGrey),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.primaryOrange
-                                          .withValues(alpha: 0.1),
-                                      borderRadius:
-                                          BorderRadius.circular(8),
-                                    ),
-                                    child: const Icon(
-                                      Icons.store_outlined,
-                                      size: 18,
-                                      color: AppTheme.primaryOrange,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          loc.label,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                        Text(
-                                          loc.fullAddress,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: AppTheme.greyText,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )),
-                    const SizedBox(height: 12),
-                  ],
-
                   const SizedBox(height: 8),
                 ],
               ),
@@ -713,18 +643,6 @@ class _CookMealCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      meal.shortDescription.isNotEmpty
-                          ? meal.shortDescription
-                          : meal.category,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.greyText,
                       ),
                     ),
                     const SizedBox(height: 8),

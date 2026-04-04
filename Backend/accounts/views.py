@@ -17,7 +17,6 @@ from .models import (
     CustomerProfile,
     CookProfile,
     Address,
-    PickupLocation,
     Follow,
     PhoneOTP,
 )
@@ -28,7 +27,6 @@ from .serializers import (
     CustomerProfileSerializer,
     CookProfileSerializer,
     AddressSerializer,
-    PickupLocationSerializer,
     ChangePasswordSerializer,
     SendOTPSerializer,
     VerifyOTPSerializer,
@@ -294,23 +292,6 @@ class AddressViewSet(viewsets.ModelViewSet):
         if user.role == 'admin':
             return Address.objects.select_related('user').all()
         return Address.objects.filter(user=user)
-
-
-# ---------------------------------------------------------------------------
-# Pickup Locations (for cooks)
-# ---------------------------------------------------------------------------
-
-class PickupLocationViewSet(viewsets.ModelViewSet):
-    """CRUD for the authenticated cook's pickup locations."""
-
-    serializer_class = PickupLocationSerializer
-    permission_classes = [IsAuthenticated, IsCook]
-
-    def get_queryset(self):
-        return PickupLocation.objects.filter(cook=self.request.user.cook_profile)
-
-    def perform_create(self, serializer):
-        serializer.save(cook=self.request.user.cook_profile)
 
 
 # ---------------------------------------------------------------------------

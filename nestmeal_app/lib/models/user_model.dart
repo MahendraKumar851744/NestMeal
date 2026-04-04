@@ -1,64 +1,5 @@
 import 'helpers.dart';
 
-class PickupLocationModel {
-  final String id;
-  final String label;
-  final String street;
-  final String city;
-  final String state;
-  final String zipCode;
-  final double? latitude;
-  final double? longitude;
-  final bool isActive;
-
-  PickupLocationModel({
-    required this.id,
-    required this.label,
-    required this.street,
-    required this.city,
-    required this.state,
-    required this.zipCode,
-    this.latitude,
-    this.longitude,
-    this.isActive = true,
-  });
-
-  factory PickupLocationModel.fromJson(Map<String, dynamic> json) {
-    return PickupLocationModel(
-      id: json['id'].toString(),
-      label: json['label'] ?? '',
-      street: json['street'] ?? '',
-      city: json['city'] ?? '',
-      state: json['state'] ?? '',
-      zipCode: json['zip_code'] ?? '',
-      latitude: json['latitude'] != null ? toSafeDouble(json['latitude']) : null,
-      longitude: json['longitude'] != null ? toSafeDouble(json['longitude']) : null,
-      isActive: json['is_active'] ?? true,
-    );
-  }
-
-  // ---> ADDED THIS METHOD <---
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'label': label,
-      'street': street,
-      'city': city,
-      'state': state,
-      'zip_code': zipCode,
-      'latitude': latitude,
-      'longitude': longitude,
-      'is_active': isActive,
-    };
-  }
-
-  String get fullAddress {
-    final parts = [street, city, state, zipCode].where((s) => s.isNotEmpty);
-    return parts.join(', ');
-  }
-}
-
-
 class UserModel {
   final String id;
   final String email;
@@ -193,7 +134,6 @@ class CookProfile {
   final String status;
   final double commissionRate;
   final int followersCount;
-  final List<PickupLocationModel> pickupLocations;
 
   CookProfile({
     required this.id,
@@ -215,11 +155,10 @@ class CookProfile {
     required this.avgRating,
     required this.totalReviews,
     required this.isActive,
-    required this.isAvailable, // <-- Added to constructor
+    required this.isAvailable,
     required this.status,
     required this.commissionRate,
     this.followersCount = 0,
-    required this.pickupLocations,
   });
 
   factory CookProfile.fromJson(Map<String, dynamic> json) {
@@ -251,10 +190,6 @@ class CookProfile {
       status: json['status'] ?? '',
       commissionRate: toSafeDouble(json['commission_rate']),
       followersCount: json['followers_count'] ?? 0,
-      pickupLocations: (json['pickup_locations'] as List?)
-              ?.map((loc) => PickupLocationModel.fromJson(loc))
-              .toList() ??
-          [],
     );
   }
 
@@ -279,10 +214,9 @@ class CookProfile {
       'avg_rating': avgRating,
       'total_reviews': totalReviews,
       'is_active': isActive,
-      'is_available': isAvailable, // <-- Added to JSON serialization
+      'is_available': isAvailable,
       'status': status,
       'commission_rate': commissionRate,
-      'pickup_locations': pickupLocations,
     };
   }
 }

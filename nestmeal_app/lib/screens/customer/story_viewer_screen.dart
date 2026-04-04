@@ -2,8 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../models/story_model.dart';
+import '../../providers/story_provider.dart';
 
 class StoryViewerScreen extends StatefulWidget {
   final List<CookStoryGroup> storyGroups;
@@ -43,9 +45,15 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
     super.dispose();
   }
 
+  void _markCurrentViewed() {
+    final story = widget.storyGroups[_currentGroupIndex].stories[_currentStoryIndex];
+    context.read<StoryProvider>().markStoryViewed(story.id);
+  }
+
   void _startTimer() {
     _timer?.cancel();
     _progress = 0.0;
+    _markCurrentViewed();
     const tick = Duration(milliseconds: 50);
     _timer = Timer.periodic(tick, (timer) {
       if (!mounted) {
@@ -54,10 +62,10 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
       }
       setState(() {
         _progress += tick.inMilliseconds / _storyDuration.inMilliseconds;
-        if (_progress >= 1.0) {
-          _nextStory();
-        }
       });
+      if (_progress >= 1.0) {
+        _nextStory();
+      }
     });
   }
 

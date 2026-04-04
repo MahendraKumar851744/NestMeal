@@ -1,11 +1,12 @@
 from rest_framework import serializers
-from .models import Story
+from .models import Story, StoryView
 
 
 class StorySerializer(serializers.ModelSerializer):
     cook_id = serializers.UUIDField(source='cook.id', read_only=True)
     cook_display_name = serializers.CharField(source='cook.display_name', read_only=True)
     image_url = serializers.SerializerMethodField()
+    is_viewed = serializers.SerializerMethodField()
 
     class Meta:
         model = Story
@@ -13,6 +14,7 @@ class StorySerializer(serializers.ModelSerializer):
             'id', 'cook_id', 'cook_display_name',
             'image_url', 'caption',
             'created_at', 'expires_at', 'is_active',
+            'is_viewed',
         ]
         read_only_fields = ['id', 'created_at', 'expires_at', 'is_active']
 
@@ -21,6 +23,12 @@ class StorySerializer(serializers.ModelSerializer):
         if obj.image and request:
             return request.build_absolute_uri(obj.image.url)
         return obj.image.url if obj.image else None
+
+    def get_is_viewed(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return StoryView.objects.filter(story=obj, customer=request.user).exists()
+        return False
 
 
 class StoryCreateSerializer(serializers.ModelSerializer):

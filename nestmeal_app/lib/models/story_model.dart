@@ -6,6 +6,7 @@ class StoryModel {
   final String caption;
   final String createdAt;
   final String expiresAt;
+  final bool isViewed;
 
   StoryModel({
     required this.id,
@@ -15,6 +16,7 @@ class StoryModel {
     this.caption = '',
     required this.createdAt,
     required this.expiresAt,
+    this.isViewed = false,
   });
 
   factory StoryModel.fromJson(Map<String, dynamic> json) {
@@ -26,8 +28,20 @@ class StoryModel {
       caption: json['caption'] ?? '',
       createdAt: json['created_at'] ?? '',
       expiresAt: json['expires_at'] ?? '',
+      isViewed: json['is_viewed'] ?? false,
     );
   }
+
+  StoryModel copyWithViewed() => StoryModel(
+        id: id,
+        cookId: cookId,
+        cookDisplayName: cookDisplayName,
+        imageUrl: imageUrl,
+        caption: caption,
+        createdAt: createdAt,
+        expiresAt: expiresAt,
+        isViewed: true,
+      );
 }
 
 class CookStoryGroup {
@@ -40,6 +54,8 @@ class CookStoryGroup {
     required this.cookDisplayName,
     required this.stories,
   });
+
+  bool get hasUnviewed => stories.any((s) => !s.isViewed);
 
   factory CookStoryGroup.fromStories(List<StoryModel> stories) {
     return CookStoryGroup(

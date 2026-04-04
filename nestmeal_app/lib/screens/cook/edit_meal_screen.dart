@@ -1009,9 +1009,6 @@ import 'package:nestmeal_app/config/theme.dart';
 import 'package:nestmeal_app/models/meal_model.dart';
 import 'package:nestmeal_app/providers/meal_provider.dart';
 
-// --- ADDED IMPORTS FOR PICKUP LOCATIONS ---
-import 'package:nestmeal_app/providers/auth_provider.dart';
-import 'package:nestmeal_app/models/user_model.dart';
 
 class _AddOnItem {
   final String name;
@@ -1039,7 +1036,6 @@ class EditMealScreen extends StatefulWidget {
 class _EditMealScreenState extends State<EditMealScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _mealNameController;
-  late final TextEditingController _shortDescriptionController;
   late final TextEditingController _descriptionController;
   late final TextEditingController _priceController;
   late final TextEditingController _discountController;
@@ -1076,9 +1072,6 @@ class _EditMealScreenState extends State<EditMealScreen> {
   final List<String> _allFulfillmentModes = ['pickup', 'delivery'];
   late Set<String> _selectedFulfillmentModes;
   
-  // --- ADDED SET TO TRACK SELECTED PICKUP LOCATIONS ---
-  late Set<String> _selectedPickupLocations;
-
   final List<String> _allDays = [
   'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun',
 ];
@@ -1104,7 +1097,6 @@ class _EditMealScreenState extends State<EditMealScreen> {
   void initState() {
     super.initState();
     _mealNameController = TextEditingController();
-    _shortDescriptionController = TextEditingController();
     _descriptionController = TextEditingController();
     _priceController = TextEditingController();
     _discountController = TextEditingController();
@@ -1121,7 +1113,6 @@ class _EditMealScreenState extends State<EditMealScreen> {
     _selectedDietaryTags = {};
     _selectedAllergens = {};
     _selectedFulfillmentModes = {'pickup'};
-    _selectedPickupLocations = {}; // Initialized
     _selectedDays = {};
     _isAvailable = true;
     _existingExtras = widget.meal.extras;
@@ -1150,7 +1141,6 @@ class _EditMealScreenState extends State<EditMealScreen> {
   void _populateForm(MealModel m) {
     setState(() {
       _mealNameController.text = m.title;
-      _shortDescriptionController.text = m.shortDescription;
       _descriptionController.text = m.description;
       _priceController.text = m.price > 0 ? m.price.toStringAsFixed(2) : '';
       _discountController.text = m.discountPercentage > 0 ? m.discountPercentage.toStringAsFixed(1) : '';
@@ -1170,9 +1160,6 @@ class _EditMealScreenState extends State<EditMealScreen> {
           ? Set<String>.from(m.fulfillmentModes)
           : {'pickup'};
           
-      // --- ADDED: Load already selected pickup locations from model ---
-      _selectedPickupLocations = m.pickupLocations.map((l) => l.id).toSet();
-
       _selectedDays = Set<String>.from(m.availableDays);
       _isAvailable = m.isAvailable;
       
@@ -1185,7 +1172,6 @@ class _EditMealScreenState extends State<EditMealScreen> {
   @override
   void dispose() {
     _mealNameController.dispose();
-    _shortDescriptionController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
     _discountController.dispose();
@@ -1247,75 +1233,6 @@ class _EditMealScreenState extends State<EditMealScreen> {
         ),
       ),
     );
-  }
-
-  // --- ADDED PICKUP LOCATION DIALOG ---
-  Future<void> _showAddPickupLocationDialog() async {
-    final labelCtrl = TextEditingController();
-    final streetCtrl = TextEditingController();
-    final cityCtrl = TextEditingController();
-    final stateCtrl = TextEditingController();
-    final zipCtrl = TextEditingController();
-
-    final result = await showDialog<bool>(
-      context: context, 
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Add Pickup Location'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: labelCtrl, decoration: const InputDecoration(labelText: 'Label', hintText: 'e.g., Home, Kitchen...')),
-              const SizedBox(height: 8),
-              TextField(controller: streetCtrl, decoration: const InputDecoration(labelText: 'Street Address')),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(child: TextField(controller: cityCtrl, decoration: const InputDecoration(labelText: 'Suburb'))),
-                  const SizedBox(width: 8),
-                  Expanded(child: TextField(controller: stateCtrl, decoration: const InputDecoration(labelText: 'City'))),
-                ],
-              ),
-              const SizedBox(height: 8),
-              TextField(controller: zipCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Postcode')),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: AppTheme.greyText))),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryOrange),
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
-
-    if (result == true && mounted) {
-      if (labelCtrl.text.isEmpty || streetCtrl.text.isEmpty || cityCtrl.text.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Label, street and suburb are required'), backgroundColor: AppTheme.errorRed));
-        return;
-      }
-      try {
-        await context.read<AuthProvider>().addPickupLocation({
-          'label': labelCtrl.text.trim(),
-          'street': streetCtrl.text.trim(),
-          'city': cityCtrl.text.trim(),
-          'state': stateCtrl.text.trim(),
-          'zip_code': zipCtrl.text.trim(),
-        });
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Pickup location added!'), backgroundColor: AppTheme.successGreen));
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: AppTheme.errorRed));
-        }
-      }
-    }
   }
 
   void _showAddOnDialog() {
@@ -1418,7 +1335,6 @@ class _EditMealScreenState extends State<EditMealScreen> {
 
     final data = <String, dynamic>{
       'title': _mealNameController.text.trim(),
-      'short_description': _shortDescriptionController.text.trim(),
       'description': _descriptionController.text.trim(),
       'price': double.tryParse(_priceController.text.trim()) ?? 0,
       'discount_percentage': double.tryParse(_discountController.text.trim()) ?? 0,
@@ -1427,7 +1343,6 @@ class _EditMealScreenState extends State<EditMealScreen> {
       'meal_type': _selectedMealType,
       'spice_level': _selectedSpiceLevel,
       'fulfillment_modes': _selectedFulfillmentModes.toList(),
-      'pickup_locations': _selectedPickupLocations.toList(), // <-- ADDED
       'available_days': _selectedDays.toList(),
       'is_available': _isAvailable,
       'status': _selectedStatus,
@@ -1722,16 +1637,6 @@ class _EditMealScreenState extends State<EditMealScreen> {
                     const SizedBox(height: 16),
 
                     TextFormField(
-                      controller: _shortDescriptionController,
-                      maxLength: 150,
-                      decoration: const InputDecoration(
-                        labelText: 'Short Description',
-                        hintText: 'Brief summary shown in meal cards',
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    TextFormField(
                       controller: _descriptionController,
                       maxLines: 4,
                       maxLength: 1000,
@@ -2004,56 +1909,7 @@ class _EditMealScreenState extends State<EditMealScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // --- ADDED PICKUP LOCATIONS UI BLOCK ---
-                    if (_selectedFulfillmentModes.contains('pickup')) ...[
-                      const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _buildSectionLabel('Pickup Locations'),
-                          TextButton.icon(
-                            onPressed: _showAddPickupLocationDialog, 
-                            icon: const Icon(Icons.add_circle_outline),
-                            label: const Text('Add New'),
-                            style: TextButton.styleFrom(foregroundColor: AppTheme.primaryOrange),
-                          )
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Consumer<AuthProvider>(
-                        builder: (context, authProvider, child) {
-                          final locations = authProvider.currentUser?.cookProfile?.pickupLocations ?? [];
-                          if (locations.isEmpty) {
-                            return Text('No pickup locations found. Please add one.', style: TextStyle(color: AppTheme.greyText, fontSize: 13));
-                          }
-                          return Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: locations.map((loc) {
-                              final selected = _selectedPickupLocations.contains(loc.id);
-                              return FilterChip(
-                                label: Text(loc.label),
-                                selected: selected,
-                                onSelected: (val) {
-                                  setState(() {
-                                    if (val) {
-                                      _selectedPickupLocations.add(loc.id);
-                                    } else {
-                                      _selectedPickupLocations.remove(loc.id);
-                                    }
-                                  });
-                                },
-                                selectedColor: AppTheme.primaryOrange,
-                                checkmarkColor: Colors.white,
-                                labelStyle: TextStyle(color: selected ? Colors.white : AppTheme.darkText),
-                              );
-                            }).toList(),
-                          );
-                        }
-                      ),
-                    ],
                     const SizedBox(height: 20),
-                    // --- END OF PICKUP LOCATIONS BLOCK ---
 
                     _buildSectionLabel('Available Days'),
                     const SizedBox(height: 8),

@@ -156,24 +156,6 @@ class CookProfile(models.Model):
         return self.display_name
 
 
-class PickupLocation(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    cook = models.ForeignKey(CookProfile, on_delete=models.CASCADE, related_name='pickup_locations')
-    label = models.CharField(max_length=100)
-    street = models.CharField(max_length=255)
-    city = models.CharField(max_length=100)
-    state = models.CharField(max_length=100)
-    zip_code = models.CharField(max_length=20)
-    latitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
-    longitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
-    is_active = models.BooleanField(default=True)
-
-    class Meta:
-        db_table = 'pickup_locations'
-
-    def __str__(self):
-        return f"{self.label} - {self.cook.display_name}"
-
 
 class Follow(models.Model):
     """A customer follows a cook."""

@@ -16,6 +16,5 @@ class ApiConfig {
   static const String cooksPublicUrl = '$baseUrl/accounts/cooks';
   static const String followingUrl = '$baseUrl/accounts/me/following';
   static const String storiesUrl = '$baseUrl/stories';
-  static const String pickupLocationsUrl = '$baseUrl/accounts/pickup-locations';
   static const String walletTopUpUrl = '$baseUrl/payments/wallet/top-up';
 }

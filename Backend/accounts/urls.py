@@ -12,7 +12,6 @@ from .views import (
     CookPublicListView,
     CookPublicDetailView,
     AddressViewSet,
-    PickupLocationViewSet,
     ToggleFollowView,
     MyFollowingListView,
     SendOTPView,
@@ -24,7 +23,6 @@ router = DefaultRouter()
 router.register(r'addresses', AddressViewSet, basename='address')
 router.register(r'cook-profiles', CookProfileViewSet, basename='cook-profile')
 router.register(r'customer-profiles', CustomerProfileViewSet, basename='customer-profile')
-router.register(r'pickup-locations', PickupLocationViewSet, basename='pickup-location')
 
 urlpatterns = [
     # Authentication

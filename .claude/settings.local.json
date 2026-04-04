@@ -62,7 +62,13 @@
       "Read(//d/Business/Project -  Study Abroad Student Service Provider/nestmeal_app/lib/screens/**)",
       "Read(//d/Business/**)",
       "Bash(BASE=\"D:/Business/Project -  Study Abroad Student Service Provider/Home Bites\")",
-      "Read(//d/Business/Project -  Study Abroad Student Service Provider/Home Bites/testing/$BASE/nestmeal_app/lib/screens/**)"
+      "Read(//d/Business/Project -  Study Abroad Student Service Provider/Home Bites/testing/$BASE/nestmeal_app/lib/screens/**)",
+      "Bash(python manage.py shell -c ':*)",
+      "Bash(python manage.py makemigrations stories)",
+      "Bash(python manage.py migrate stories)",
+      "Bash(python manage.py makemigrations --name remove_pickup_locations)",
+      "Bash(python manage.py check)",
+      "Bash(python manage.py makemigrations --name remove_short_description)"
     ]
   }
 }

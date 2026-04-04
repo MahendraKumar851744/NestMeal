@@ -5,6 +5,7 @@ from django.db import models
 from django.utils import timezone
 
 from accounts.models import CookProfile
+from django.conf import settings
 
 
 class Story(models.Model):
@@ -31,3 +32,18 @@ class Story(models.Model):
     @property
     def is_expired(self):
         return timezone.now() > self.expires_at
+
+
+class StoryView(models.Model):
+    story = models.ForeignKey(Story, on_delete=models.CASCADE, related_name='views')
+    customer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='story_views'
+    )
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'story_views'
+        unique_together = ['story', 'customer']
+
+    def __str__(self):
+        return f"{self.customer.email} viewed story {self.story.id}"

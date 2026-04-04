@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../config/api_config.dart'; // Assuming you have a base URL config
-import '../models/cook_profile.dart'; // Import your model
+import '../models/pending_cook_profile.dart'; // Import your model
 
 class AdminProvider extends ChangeNotifier {
   final ApiService _apiService;

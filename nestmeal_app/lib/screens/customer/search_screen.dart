@@ -36,22 +36,22 @@ class _SearchScreenState extends State<SearchScreen> {
 
   static const _categories = [
     'all',
-    'main_course',
-    'side_dish',
-    'dessert',
-    'snack',
-    'beverage',
     'breakfast',
+    'lunch',
+    'dinner',
+    'snack',
+    'dessert',
+    'meal_kit',
   ];
 
   static const _categoryLabels = {
     'all': 'All',
-    'main_course': 'Main Course',
-    'side_dish': 'Side Dish',
-    'dessert': 'Dessert',
-    'snack': 'Snack',
-    'beverage': 'Beverage',
     'breakfast': 'Breakfast',
+    'lunch': 'Lunch',
+    'dinner': 'Dinner',
+    'snack': 'Snack',
+    'dessert': 'Dessert',
+    'meal_kit': 'Meal Kit',
   };
 
   static const _cuisines = [

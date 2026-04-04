@@ -5,6 +5,7 @@ from .views import (
     StoryCreateView,
     StoryDeleteView,
     MyStoriesView,
+    MarkStoryViewedView,
 )
 
 urlpatterns = [
@@ -12,5 +13,6 @@ urlpatterns = [
     path('stories/feed/', StoryFeedView.as_view(), name='story-feed'),
     path('stories/my/', MyStoriesView.as_view(), name='my-stories'),
     path('stories/cook/<uuid:cook_id>/', CookStoriesView.as_view(), name='cook-stories'),
+    path('stories/<uuid:pk>/view/', MarkStoryViewedView.as_view(), name='story-mark-viewed'),
     path('stories/<uuid:pk>/', StoryDeleteView.as_view(), name='story-delete'),
 ]

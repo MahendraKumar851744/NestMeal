@@ -6,7 +6,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 
 from accounts.models import Follow
 from accounts.permissions import IsCook, IsCustomer
-from .models import Story
+from .models import Story, StoryView
 from .serializers import StorySerializer, StoryCreateSerializer
 
 
@@ -70,3 +70,17 @@ class MyStoriesView(generics.ListAPIView):
 
     def get_queryset(self):
         return _active_stories_qs().filter(cook=self.request.user.cook_profile)
+
+
+class MarkStoryViewedView(generics.GenericAPIView):
+    """POST /stories/<id>/view/ -- mark a story as viewed by the current customer."""
+
+    permission_classes = [IsAuthenticated, IsCustomer]
+
+    def post(self, request, pk):
+        try:
+            story = _active_stories_qs().get(pk=pk)
+        except Story.DoesNotExist:
+            return Response({'detail': 'Story not found.'}, status=status.HTTP_404_NOT_FOUND)
+        StoryView.objects.get_or_create(story=story, customer=request.user)
+        return Response({'detail': 'Marked as viewed.'}, status=status.HTTP_200_OK)

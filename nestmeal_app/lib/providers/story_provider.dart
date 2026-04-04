@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 import '../config/api_config.dart';
 import '../models/story_model.dart';
 import '../services/api_service.dart';
@@ -92,15 +94,16 @@ class StoryProvider extends ChangeNotifier {
   }
 
   /// Upload a new story (cook only).
-  Future<void> uploadStory(String imagePath, {String caption = ''}) async {
+  Future<void> uploadStory(XFile file, Uint8List bytes, {String caption = ''}) async {
     isLoading = true;
     error = null;
     _safeNotify();
 
     try {
-      await _apiService.uploadFile(
+      await _apiService.uploadFileBytes(
         '${ApiConfig.storiesUrl}/',
-        imagePath,
+        bytes,
+        file.name,
         fieldName: 'image',
         fields: caption.isNotEmpty ? {'caption': caption} : null,
       );
@@ -123,6 +126,28 @@ class StoryProvider extends ChangeNotifier {
       error = e.toString();
       notifyListeners();
       rethrow;
+    }
+  }
+
+  /// Mark a story as viewed and update local state immediately.
+  Future<void> markStoryViewed(String storyId) async {
+    // Update local state optimistically so the ring changes without waiting
+    storyFeed = storyFeed.map((group) {
+      final updated = group.stories.map((s) {
+        return s.id == storyId ? s.copyWithViewed() : s;
+      }).toList();
+      return CookStoryGroup(
+        cookId: group.cookId,
+        cookDisplayName: group.cookDisplayName,
+        stories: updated,
+      );
+    }).toList();
+    notifyListeners();
+
+    try {
+      await _apiService.post('${ApiConfig.storiesUrl}/$storyId/view/', {});
+    } catch (_) {
+      // Fire-and-forget — local state already updated
     }
   }
 

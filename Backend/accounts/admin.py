@@ -5,7 +5,6 @@ from .models import (
     User,
     CustomerProfile,
     CookProfile,
-    PickupLocation,
     Address,
     AdminProfile,
 )
@@ -52,14 +51,6 @@ class CookProfileAdmin(admin.ModelAdmin):
     list_filter = ['status', 'is_active', 'kitchen_city', 'delivery_enabled']
     search_fields = ['display_name', 'user__email', 'user__full_name', 'kitchen_city']
     readonly_fields = ['id', 'avg_rating', 'total_reviews', 'created_at', 'updated_at']
-
-
-@admin.register(PickupLocation)
-class PickupLocationAdmin(admin.ModelAdmin):
-    list_display = ['label', 'cook', 'city', 'state', 'is_active']
-    list_filter = ['is_active', 'city']
-    search_fields = ['label', 'cook__display_name', 'city']
-    readonly_fields = ['id']
 
 
 @admin.register(Address)

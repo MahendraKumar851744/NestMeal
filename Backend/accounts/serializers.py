@@ -8,7 +8,6 @@ from .models import (
     User,
     CustomerProfile,
     CookProfile,
-    PickupLocation,
     Address,
     AdminProfile,
     Follow,
@@ -19,15 +18,6 @@ from .models import (
 # ---------------------------------------------------------------------------
 # Nested / supporting serializers
 # ---------------------------------------------------------------------------
-
-class PickupLocationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PickupLocation
-        fields = [
-            'id', 'label', 'street', 'city', 'state', 'zip_code',
-            'latitude', 'longitude', 'is_active',
-        ]
-        read_only_fields = ['id']
 
 
 class AddressSerializer(serializers.ModelSerializer):
@@ -74,7 +64,6 @@ class CustomerProfileSerializer(serializers.ModelSerializer):
 
 
 class CookProfileSerializer(serializers.ModelSerializer):
-    pickup_locations = PickupLocationSerializer(many=True, read_only=True)
     user_email = serializers.EmailField(source='user.email', read_only=True)
     full_name = serializers.CharField(source='user.full_name', read_only=True)
     followers_count = serializers.IntegerField(read_only=True, default=0)
@@ -87,7 +76,7 @@ class CookProfileSerializer(serializers.ModelSerializer):
             'display_name', 'bio', 'is_available',
             'kitchen_street', 'kitchen_city', 'kitchen_state', 'kitchen_zip',
             'kitchen_latitude', 'kitchen_longitude',
-            'pickup_instructions', 'pickup_locations',
+            'pickup_instructions',
             'delivery_enabled', 'delivery_radius_km',
             'delivery_fee_type', 'delivery_fee_value', 'delivery_min_order',
             'food_safety_certificate_url', 'government_id',

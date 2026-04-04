@@ -1595,17 +1595,6 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                                   ],
                                 ),
                                 // --- NEW ADDED CODE END ---
-                                if (meal.shortDescription.isNotEmpty) ...[
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    meal.shortDescription,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: AppTheme.greyText,
-                                      height: 1.3,
-                                    ),
-                                  ),
-                                ],
                               ],
                             ),
                           ),

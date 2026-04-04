@@ -1,5 +1,4 @@
 import 'helpers.dart';
-import 'user_model.dart' show PickupLocationModel;
 
 class MealExtra {
   final String id;
@@ -95,7 +94,6 @@ class CookCard {
   final double deliveryRadiusKm;
   final bool isActive;
   final String status;
-  final List<PickupLocationModel> pickupLocations;
 
   CookCard({
     required this.id,
@@ -111,7 +109,6 @@ class CookCard {
     required this.deliveryRadiusKm,
     required this.isActive,
     required this.status,
-    this.pickupLocations = const [],
   });
 
   factory CookCard.fromJson(Map<String, dynamic> json) {
@@ -129,10 +126,6 @@ class CookCard {
       deliveryRadiusKm: toSafeDouble(json['delivery_radius_km']),
       isActive: json['is_active'] ?? false,
       status: json['status'] ?? '',
-      pickupLocations: (json['pickup_locations'] as List?)
-              ?.map((loc) => PickupLocationModel.fromJson(loc))
-              .toList() ??
-          [],
     );
   }
 
@@ -160,7 +153,6 @@ class MealModel {
   final String cookId;
   final String title;
   final String description;
-  final String shortDescription;
   final double price;
   final double discountPercentage;
   final double effectivePrice;
@@ -184,7 +176,6 @@ class MealModel {
   final String status;
   final List<MealImage> images;
   final List<MealExtra> extras;
-  final List<PickupLocationModel> pickupLocations;
   final String? orderCutoffTime;
   final bool isPastCutoff;
   final String cookDisplayName;
@@ -196,7 +187,6 @@ class MealModel {
     required this.cookId,
     required this.title,
     required this.description,
-    required this.shortDescription,
     required this.price,
     required this.discountPercentage,
     required this.effectivePrice,
@@ -222,7 +212,6 @@ class MealModel {
     required this.status,
     required this.images,
     this.extras = const [],
-    this.pickupLocations = const [],
     required this.cookDisplayName,
     required this.createdAt,
     required this.updatedAt,
@@ -234,7 +223,6 @@ class MealModel {
       cookId: (json['cook'] is Map) ? json['cook']['id'].toString() : json['cook'].toString(),
       title: json['title'] ?? '',
       description: json['description'] ?? '',
-      shortDescription: json['short_description'] ?? '',
       price: toSafeDouble(json['price']),
       discountPercentage: toSafeDouble(json['discount_percentage']),
       effectivePrice: toSafeDouble(json['effective_price'] ?? json['price']),
@@ -264,10 +252,6 @@ class MealModel {
               ?.map((e) => MealExtra.fromJson(e))
               .toList() ??
           [],
-      pickupLocations: (json['pickup_locations'] as List?) // <-- ADDED
-              ?.map((loc) => PickupLocationModel.fromJson(loc))
-              .toList() ??
-          [],
       orderCutoffTime: json['order_cutoff_time'],
       isPastCutoff: json['is_past_cutoff'] ?? false,
       cookDisplayName: json['cook_display_name'] ??
@@ -283,7 +267,6 @@ class MealModel {
       'cook': cookId,
       'title': title,
       'description': description,
-      'short_description': shortDescription,
       'price': price,
       'discount_percentage': discountPercentage,
       'effective_price': effectivePrice,
@@ -308,7 +291,6 @@ class MealModel {
       'status': status,
       'images': images.map((img) => img.toJson()).toList(),
       'extras': extras.map((e) => e.toJson()).toList(),
-      'pickup_locations': pickupLocations.map((l) => l.toJson()).toList(), // <-- ADDED
       'cook_display_name': cookDisplayName,
       'created_at': createdAt,
       'updated_at': updatedAt,
@@ -324,7 +306,6 @@ class MealDetail extends MealModel {
     required super.cookId,
     required super.title,
     required super.description,
-    required super.shortDescription,
     required super.price,
     required super.discountPercentage,
     required super.effectivePrice,
@@ -366,7 +347,6 @@ class MealDetail extends MealModel {
       cookId: cookData.isNotEmpty ? cookData['id'].toString() : json['cook'].toString(),
       title: json['title'] ?? '',
       description: json['description'] ?? '',
-      shortDescription: json['short_description'] ?? '',
       price: toSafeDouble(json['price']),
       discountPercentage: toSafeDouble(json['discount_percentage']),
       effectivePrice: toSafeDouble(json['effective_price'] ?? json['price']),

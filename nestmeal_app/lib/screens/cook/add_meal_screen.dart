@@ -8,8 +8,6 @@ import 'package:nestmeal_app/config/api_config.dart';
 import 'package:nestmeal_app/config/theme.dart';
 import 'package:nestmeal_app/providers/meal_provider.dart';
 
-import 'package:nestmeal_app/providers/auth_provider.dart';
-import 'package:nestmeal_app/models/user_model.dart';
 
 // --- NEW ADDED CODE START ---
 class _AddOnItem {
@@ -37,7 +35,6 @@ class AddMealScreen extends StatefulWidget {
 class _AddMealScreenState extends State<AddMealScreen> {
   final _formKey = GlobalKey<FormState>();
   final _mealNameController = TextEditingController();
-  final _shortDescriptionController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
   final _discountController = TextEditingController(text: '0');
@@ -73,8 +70,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
   final List<String> _allFulfillmentModes = ['pickup', 'delivery'];
   final Set<String> _selectedFulfillmentModes = {'pickup'};
 
-  final Set<String> _selectedPickupLocations = {};
-
   final List<String> _allDays = [
   'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun',
 ];
@@ -93,7 +88,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
   @override
   void dispose() {
     _mealNameController.dispose();
-    _shortDescriptionController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
     _discountController.dispose();
@@ -125,80 +119,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
       }
     }
   }
-
-  // 1. REMOVE the parameter (BuildContext context)
-  Future<void> _showAddPickupLocationDialog() async {
-    final labelCtrl = TextEditingController();
-    final streetCtrl = TextEditingController();
-    final cityCtrl = TextEditingController();
-    final stateCtrl = TextEditingController();
-    final zipCtrl = TextEditingController();
-
-    final result = await showDialog<bool>(
-      // 2. This context now refers to the State's context
-      context: context, 
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Add Pickup Location'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: labelCtrl, decoration: const InputDecoration(labelText: 'Label', hintText: 'e.g., Home, Kitchen...')),
-              const SizedBox(height: 8),
-              TextField(controller: streetCtrl, decoration: const InputDecoration(labelText: 'Street Address')),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(child: TextField(controller: cityCtrl, decoration: const InputDecoration(labelText: 'Suburb'))),
-                  const SizedBox(width: 8),
-                  Expanded(child: TextField(controller: stateCtrl, decoration: const InputDecoration(labelText: 'City'))),
-                ],
-              ),
-              const SizedBox(height: 8),
-              TextField(controller: zipCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Postcode')),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: AppTheme.greyText))),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryOrange),
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
-
-    // 3. The `mounted` check is now correctly protecting the State's context
-    if (result == true && mounted) {
-      if (labelCtrl.text.isEmpty || streetCtrl.text.isEmpty || cityCtrl.text.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Label, street and suburb are required'), backgroundColor: AppTheme.errorRed));
-        return;
-      }
-      try {
-        await context.read<AuthProvider>().addPickupLocation({
-          'label': labelCtrl.text.trim(),
-          'street': streetCtrl.text.trim(),
-          'city': cityCtrl.text.trim(),
-          'state': stateCtrl.text.trim(),
-          'zip_code': zipCtrl.text.trim(),
-        });
-        
-        // 4. We must check mounted AGAIN before using context after the second await!
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Pickup location added!'), backgroundColor: AppTheme.successGreen));
-        }
-      } catch (e) {
-        // 5. And check mounted here too!
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: AppTheme.errorRed));
-        }
-      }
-    }
-  }
- 
 
   void _removeImage(int index) {
     setState(() => _selectedImages.removeAt(index));
@@ -335,7 +255,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
 
     final data = <String, dynamic>{
       'title': _mealNameController.text.trim(),
-      'short_description': _shortDescriptionController.text.trim(),
       'description': _descriptionController.text.trim(),
       'price': double.tryParse(_priceController.text.trim()) ?? 0,
       'discount_percentage': double.tryParse(_discountController.text.trim()) ?? 0,
@@ -347,7 +266,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
       // 'dietary_tags': _selectedDietaryTags.toList(),
       // 'allergen_info': _selectedAllergens.toList(),
       'fulfillment_modes': _selectedFulfillmentModes.toList(),
-      'pickup_locations': _selectedPickupLocations.toList(),
       'available_days': _selectedDays.toList(),
       'is_available': true,
       'status': 'active',
@@ -405,7 +323,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
       // Clear form
       _formKey.currentState!.reset();
       _mealNameController.clear();
-      _shortDescriptionController.clear();
       _descriptionController.clear();
       _priceController.clear();
       _discountController.text = '0';
@@ -421,8 +338,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
         _selectedFulfillmentModes.clear();
         _selectedFulfillmentModes.add('pickup');
         _selectedDays.clear();
-        _addOns.clear(); // --- NEW ADDED CODE ---
-        _selectedPickupLocations.clear();
+        _addOns.clear();
       });
     } catch (e) {
       if (!mounted) return;
@@ -550,17 +466,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
                 },
               ),
               const SizedBox(height: 16),
-
-              // Short Description
-              TextFormField(
-                controller: _shortDescriptionController,
-                maxLength: 150,
-                decoration: const InputDecoration(
-                  labelText: 'Short Description',
-                  hintText: 'Brief summary shown in meal cards',
-                ),
-              ),
-              const SizedBox(height: 8),
 
               // Description
               TextFormField(
@@ -859,57 +764,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
               ),
               const SizedBox(height: 20),
 
-              // <-- ADD THIS BLOCK AFTER FULFILLMENT MODES -->
-              if (_selectedFulfillmentModes.contains('pickup')) ...[
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildSectionLabel('Pickup Locations'),
-                    TextButton.icon(
-                      // FIXED: Removed 'context' from the parentheses here
-                      onPressed: () => _showAddPickupLocationDialog(), 
-                      icon: const Icon(Icons.add_circle_outline),
-                      label: const Text('Add New'),
-                      style: TextButton.styleFrom(foregroundColor: AppTheme.primaryOrange),
-                    )
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Consumer<AuthProvider>(
-                  builder: (context, authProvider, child) {
-                    final locations = authProvider.currentUser?.cookProfile?.pickupLocations ?? [];
-                    if (locations.isEmpty) {
-                      return Text('No pickup locations found. Please add one.', style: TextStyle(color: AppTheme.greyText, fontSize: 13));
-                    }
-                    return Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: locations.map((loc) {
-                        final selected = _selectedPickupLocations.contains(loc.id);
-                        return FilterChip(
-                          label: Text(loc.label),
-                          selected: selected,
-                          onSelected: (val) {
-                            setState(() {
-                              if (val) {
-                                _selectedPickupLocations.add(loc.id);
-                              } else {
-                                _selectedPickupLocations.remove(loc.id);
-                              }
-                            });
-                          },
-                          selectedColor: AppTheme.primaryOrange,
-                          checkmarkColor: Colors.white,
-                          labelStyle: TextStyle(color: selected ? Colors.white : AppTheme.darkText),
-                        );
-                      }).toList(),
-                    );
-                  }
-                ),
-              ],
               const SizedBox(height: 20),
-              // <-- END OF ADDED BLOCK -->
 
               // Available Days
               _buildSectionLabel('Available Days'),

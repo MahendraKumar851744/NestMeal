@@ -10,7 +10,7 @@ double toSafeDouble(dynamic value) {
 
 String currencySymbol(String currencyCode) {
   switch (currencyCode.toUpperCase()) {
-    case 'AUD': return 'A\$';
+    case 'AUD': return '\$';
     case 'INR': return '₹';
     case 'USD': return '\$';
     case 'EUR': return '€';

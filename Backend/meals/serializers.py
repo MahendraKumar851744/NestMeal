@@ -1,7 +1,5 @@
 from rest_framework import serializers
 from .models import Meal, MealExtra, MealImage, PickupSlot, RecurringSlotTemplate
-from accounts.models import PickupLocation
-from accounts.serializers import PickupLocationSerializer
 
 # ---------------------------------------------------------------------------
 # MealImage
@@ -82,7 +80,6 @@ class CookProfileCardSerializer(serializers.Serializer):
 class MealSerializer(serializers.ModelSerializer):
     images = MealImageSerializer(many=True, read_only=True)
     extras = MealExtraSerializer(many=True, read_only=True)
-    pickup_locations = PickupLocationSerializer(many=True, read_only=True) # <-- ADDED
     effective_price = serializers.DecimalField(
         max_digits=10, decimal_places=2, read_only=True,
     )
@@ -95,7 +92,7 @@ class MealSerializer(serializers.ModelSerializer):
         model = Meal
         fields = [
             'id', 'cook', 'cook_display_name',
-            'title', 'description', 'short_description',
+            'title', 'description',
             'price', 'discount_percentage', 'effective_price', 'currency',
             'category', 'cuisine_type', 'meal_type',
             'dietary_tags', 'allergen_info',
@@ -104,7 +101,7 @@ class MealSerializer(serializers.ModelSerializer):
             'is_available', 'available_days', 'order_cutoff_time', 'is_past_cutoff',
             'total_orders', 'avg_rating', 'tags',
             'is_featured', 'status',
-            'images', 'extras', 'pickup_locations',
+            'images', 'extras',
             'created_at', 'updated_at',
         ]
         read_only_fields = [
@@ -131,7 +128,7 @@ class MealListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Meal
         fields = [
-            'id', 'cook_id', 'title', 'short_description',
+            'id', 'cook_id', 'title',
             'price', 'discount_percentage', 'effective_price',
             'category', 'cuisine_type', 'meal_type', 'spice_level',
             'avg_rating', 'images',
@@ -150,7 +147,6 @@ class MealListSerializer(serializers.ModelSerializer):
 class MealDetailSerializer(serializers.ModelSerializer):
     images = MealImageSerializer(many=True, read_only=True)
     extras = MealExtraSerializer(many=True, read_only=True)
-    pickup_locations = PickupLocationSerializer(many=True, read_only=True)
     effective_price = serializers.DecimalField(
         max_digits=10, decimal_places=2, read_only=True,
     )
@@ -161,7 +157,7 @@ class MealDetailSerializer(serializers.ModelSerializer):
         model = Meal
         fields = [
             'id', 'cook',
-            'title', 'description', 'short_description',
+            'title', 'description',
             'price', 'discount_percentage', 'effective_price', 'currency',
             'category', 'cuisine_type', 'meal_type',
             'dietary_tags', 'allergen_info',
@@ -170,7 +166,7 @@ class MealDetailSerializer(serializers.ModelSerializer):
             'is_available', 'available_days', 'order_cutoff_time', 'is_past_cutoff',
             'total_orders', 'avg_rating', 'tags',
             'is_featured', 'status',
-            'images', 'extras', 'pickup_locations',
+            'images', 'extras',
             'created_at', 'updated_at',
         ]
 
@@ -185,25 +181,19 @@ class MealCreateUpdateSerializer(serializers.ModelSerializer):
     The ``cook`` field is set automatically from the authenticated user's
     CookProfile and is not accepted from the request body.
     """
-    # <-- ADDED
-    pickup_locations = serializers.PrimaryKeyRelatedField(
-        many=True, 
-        queryset=PickupLocation.objects.all(), 
-        required=False
-    )
 
     class Meta:
         model = Meal
         fields = [
             'id',
-            'title', 'description', 'short_description',
+            'title', 'description',
             'price', 'discount_percentage', 'currency',
             'category', 'cuisine_type', 'meal_type',
             'dietary_tags', 'allergen_info',
             'spice_level', 'serving_size', 'calories_approx',
             'preparation_time_mins', 'fulfillment_modes',
             'is_available', 'available_days', 'order_cutoff_time', 'tags',
-            'is_featured', 'status', 'pickup_locations',
+            'is_featured', 'status',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']

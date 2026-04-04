@@ -59,6 +59,7 @@ class _CustomerShellState extends State<CustomerShell> {
           children: List.generate(_screens.length, (index) {
             return Navigator(
               key: _navigatorKeys[index],
+              initialRoute: '/',
               onGenerateRoute: (settings) {
                 return MaterialPageRoute(
                   builder: (_) => _screens[index],

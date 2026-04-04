@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -14,7 +14,8 @@ class StoryUploadScreen extends StatefulWidget {
 }
 
 class _StoryUploadScreenState extends State<StoryUploadScreen> {
-  File? _imageFile;
+  XFile? _pickedFile;
+  Uint8List? _imageBytes;
   final _captionController = TextEditingController();
   bool _isUploading = false;
   final _picker = ImagePicker();
@@ -33,7 +34,11 @@ class _StoryUploadScreenState extends State<StoryUploadScreen> {
       imageQuality: 85,
     );
     if (picked != null) {
-      setState(() => _imageFile = File(picked.path));
+      final bytes = await picked.readAsBytes();
+      setState(() {
+        _pickedFile = picked;
+        _imageBytes = bytes;
+      });
     }
   }
 
@@ -75,13 +80,14 @@ class _StoryUploadScreenState extends State<StoryUploadScreen> {
   }
 
   Future<void> _upload() async {
-    if (_imageFile == null) return;
+    if (_pickedFile == null || _imageBytes == null) return;
     setState(() => _isUploading = true);
 
     try {
       final storyProvider = context.read<StoryProvider>();
       await storyProvider.uploadStory(
-        _imageFile!.path,
+        _pickedFile!,
+        _imageBytes!,
         caption: _captionController.text.trim(),
       );
       if (mounted) {
@@ -123,7 +129,7 @@ class _StoryUploadScreenState extends State<StoryUploadScreen> {
           ),
         ),
         actions: [
-          if (_imageFile != null)
+          if (_pickedFile != null)
             TextButton(
               onPressed: _isUploading ? null : _upload,
               child: _isUploading
@@ -171,11 +177,11 @@ class _StoryUploadScreenState extends State<StoryUploadScreen> {
                     ),
                   ],
                 ),
-                child: _imageFile != null
+                child: _imageBytes != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(18),
-                        child: Image.file(
-                          _imageFile!,
+                        child: Image.memory(
+                          _imageBytes!,
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: 400,
@@ -240,7 +246,7 @@ class _StoryUploadScreenState extends State<StoryUploadScreen> {
             const SizedBox(height: 16),
 
             // Change image button
-            if (_imageFile != null)
+            if (_pickedFile != null)
               OutlinedButton.icon(
                 onPressed: _showImageSourceSheet,
                 icon: const Icon(Icons.swap_horiz),

@@ -209,27 +209,6 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // Pickup Location CRUD
-  Future<void> addPickupLocation(Map<String, dynamic> data) async {
-    try {
-      await _apiService.post('${ApiConfig.pickupLocationsUrl}/', data);
-      await fetchProfile();
-    } catch (e) {
-      error = e.toString();
-      rethrow;
-    }
-  }
-
-  Future<void> deletePickupLocation(String locationId) async {
-    try {
-      await _apiService.delete('${ApiConfig.pickupLocationsUrl}/$locationId/');
-      await fetchProfile();
-    } catch (e) {
-      error = e.toString();
-      rethrow;
-    }
-  }
-
   Future<void> changePassword(
     String oldPassword,
     String newPassword,

@@ -43,9 +43,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final storyProvider = context.read<StoryProvider>();
     final cookProvider = context.read<CookProvider>();
     final today = _getTodayDayCode();
+    final timeCategory = _getTimeCategory();
     try {
       await Future.wait([
-        mealProvider.fetchMeals(availableDays: today),
+        mealProvider.fetchMeals(availableDays: today, category: timeCategory),
         mealProvider.fetchFeaturedMeals(),
         storyProvider.fetchStoryFeed(),
         cookProvider.fetchFollowing(),
@@ -60,11 +61,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'Good evening';
   }
 
-  String _getMealTimeQuestion() {
+  String _getTimeCategory() {
     final hour = DateTime.now().hour;
-    if (hour < 12) return "What's for breakfast?";
-    if (hour < 17) return "What's for lunch?";
-    return "What's for dinner?";
+    if (hour < 12) return 'breakfast';
+    if (hour < 17) return 'lunch';
+    return 'dinner';
   }
 
   @override
@@ -86,14 +87,14 @@ class _HomeScreenState extends State<HomeScreen> {
             SliverToBoxAdapter(
               child: SafeArea(
                 bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Greeting + Avatar row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Greeting + Avatar row
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Expanded(
                             child: Column(
@@ -102,40 +103,58 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Text(
                                   '${_getGreeting()} \u{1F37D}',
                                   style: GoogleFonts.playfairDisplay(
-                                    fontSize: 28,
+                                    fontSize: 22,
                                     fontWeight: FontWeight.w700,
                                     color: AppTheme.darkText,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  _getMealTimeQuestion(),
+                                  "What's your nextmeal?",
                                   style: const TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 14,
                                     color: AppTheme.greyText,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          CircleAvatar(
-                            radius: 22,
-                            backgroundColor: AppTheme.primaryOrange.withValues(alpha: 0.15),
-                            child: Text(
-                              (authProvider.currentUser?.fullName ?? 'U')[0].toUpperCase(),
-                              style: GoogleFonts.playfairDisplay(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
+                          const SizedBox(width: 12),
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.account_balance_wallet_rounded,
                                 color: AppTheme.primaryOrange,
+                                size: 26,
                               ),
-                            ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '\$${(authProvider.currentUser?.customerProfile?.walletBalance ?? 0.0).toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.primaryOrange,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
+                    ),
 
-                      // Search bar
-                      GestureDetector(
+                    // Stories strip (IG/WA style, above search bar)
+                    if (storyProvider.storyFeed.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      _StoryBar(storyGroups: storyProvider.storyFeed),
+                    ],
+
+                    const SizedBox(height: 0),
+
+                    // Search bar
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: GestureDetector(
                         onTap: () {
                           Navigator.push(
                             context,
@@ -169,58 +188,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 20),
-
-                      // Category chips
-                      SizedBox(
-                        height: 40,
-                        child: ListView(
-                          scrollDirection: Axis.horizontal,
-                          children: [
-                            _CategoryChip(
-                              label: 'Vegetarian',
-                              icon: Icons.eco_outlined,
-                              onTap: () => _navigateToSearch('vegetarian'),
-                            ),
-                            _CategoryChip(
-                              label: 'Non-Veg',
-                              icon: Icons.restaurant_outlined,
-                              onTap: () => _navigateToSearch('non_vegetarian'),
-                            ),
-                            _CategoryChip(
-                              label: 'Breakfast',
-                              icon: Icons.free_breakfast_outlined,
-                              onTap: () => _navigateToSearchByType('breakfast'),
-                            ),
-                            _CategoryChip(
-                              label: 'Dinner',
-                              icon: Icons.dinner_dining_outlined,
-                              onTap: () => _navigateToSearchByType('dinner'),
-                            ),
-                            _CategoryChip(
-                              label: 'Nearby',
-                              icon: Icons.near_me_outlined,
-                              onTap: () => _navigateToSearch(null),
-                            ),
-                            _CategoryChip(
-                              label: 'Top Rated',
-                              icon: Icons.star_outline,
-                              onTap: () => _navigateToSearchTopRated(),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
-
-            // Stories bar
-            if (storyProvider.storyFeed.isNotEmpty)
-              SliverToBoxAdapter(
-                child: _StoryBar(storyGroups: storyProvider.storyFeed),
-              ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
@@ -240,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> {
             if (mealProvider.isLoading && mealProvider.meals.isEmpty)
               SliverToBoxAdapter(
                 child: SizedBox(
-                  height: 280,
+                  height: 200,
                   child: _buildShimmerList(),
                 ),
               )
@@ -257,20 +229,26 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               )
             else
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 0.68,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      return _MealCard(meal: mealProvider.meals[index]);
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 200,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: mealProvider.meals.length,
+                    itemBuilder: (context, index) {
+                      final cardWidth =
+                          (MediaQuery.of(context).size.width - 44) / 2;
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          right: index < mealProvider.meals.length - 1 ? 12 : 0,
+                        ),
+                        child: SizedBox(
+                          width: cardWidth,
+                          child: _MealCard(meal: mealProvider.meals[index]),
+                        ),
+                      );
                     },
-                    childCount: mealProvider.meals.length,
                   ),
                 ),
               ),
@@ -321,32 +299,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _navigateToSearch(String? category) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => SearchScreen(initialCategory: category),
-      ),
-    );
-  }
-
-  void _navigateToSearchByType(String mealType) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => SearchScreen(initialMealType: mealType),
-      ),
-    );
-  }
-
-  void _navigateToSearchTopRated() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const SearchScreen(initialSort: '-avg_rating'),
-      ),
-    );
-  }
 
   Widget _buildShimmerList() {
     return ListView.builder(
@@ -357,6 +309,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return Container(
           width: 200,
           margin: const EdgeInsets.only(right: 12),
+          clipBehavior: Clip.hardEdge,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -365,7 +318,7 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                height: 140,
+                height: 115,
                 decoration: BoxDecoration(
                   color: AppTheme.lightGrey.withValues(alpha: 0.5),
                   borderRadius: const BorderRadius.vertical(
@@ -374,30 +327,30 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      height: 14,
+                      height: 13,
                       width: 140,
                       decoration: BoxDecoration(
                         color: AppTheme.lightGrey.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Container(
-                      height: 12,
+                      height: 11,
                       width: 100,
                       decoration: BoxDecoration(
                         color: AppTheme.lightGrey.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     Container(
-                      height: 12,
+                      height: 13,
                       width: 60,
                       decoration: BoxDecoration(
                         color: AppTheme.lightGrey.withValues(alpha: 0.5),
@@ -476,29 +429,13 @@ class _StoryBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 20),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Text(
-            'Stories',
-            style: GoogleFonts.playfairDisplay(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.darkText,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 100,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: storyGroups.length,
-            itemBuilder: (context, index) {
+    return SizedBox(
+      height: 115,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: storyGroups.length,
+        itemBuilder: (context, index) {
               final group = storyGroups[index];
               return GestureDetector(
                 onTap: () {
@@ -520,15 +457,9 @@ class _StoryBar extends StatelessWidget {
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            colors: [
-                              AppTheme.primaryOrange,
-                              Colors.deepOrange.shade700,
-                              Colors.orange.shade400,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
+                          color: group.hasUnviewed
+                              ? AppTheme.primaryOrange    // orange — unviewed
+                              : Colors.grey.shade400,     // gray   — all viewed
                         ),
                         child: Container(
                           padding: const EdgeInsets.all(2),
@@ -574,9 +505,7 @@ class _StoryBar extends StatelessWidget {
               );
             },
           ),
-        ),
-      ],
-    );
+        );
   }
 }
 
@@ -622,41 +551,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ─── Category Chip ──────────────────────────────────────────────────────────
-
-class _CategoryChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _CategoryChip({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ActionChip(
-        avatar: Icon(icon, size: 16, color: AppTheme.primaryOrange),
-        label: Text(label),
-        labelStyle: const TextStyle(
-          color: AppTheme.primaryOrange,
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-        ),
-        backgroundColor: Colors.white,
-        side: const BorderSide(color: AppTheme.primaryOrange, width: 1),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        onPressed: onTap,
-      ),
-    );
-  }
-}
 
 // ─── Meal Card ──────────────────────────────────────────────────────────────
 
@@ -680,6 +574,7 @@ class _MealCard extends StatelessWidget {
         );
       },
       child: Container(
+        clipBehavior: Clip.hardEdge,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -694,205 +589,97 @@ class _MealCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image with badges
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
-                  ),
-                  child: imageUrl != null
-                      ? CachedNetworkImage(
-                          imageUrl: imageUrl,
-                          height: 140,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          placeholder: (_, __) => Container(
-                            height: 140,
-                            color: AppTheme.lightGrey.withValues(alpha: 0.5),
-                            child: const Center(
-                              child: Icon(
-                                Icons.restaurant,
-                                color: AppTheme.greyText,
-                              ),
-                            ),
-                          ),
-                          errorWidget: (_, __, ___) => Container(
-                            height: 140,
-                            color: AppTheme.lightGrey.withValues(alpha: 0.5),
-                            child: const Center(
-                              child: Icon(
-                                Icons.restaurant,
-                                color: AppTheme.greyText,
-                              ),
-                            ),
-                          ),
-                        )
-                      : Container(
-                          height: 140,
-                          color: AppTheme.lightGrey.withValues(alpha: 0.5),
-                          child: const Center(
-                            child: Icon(
-                              Icons.restaurant,
-                              size: 40,
-                              color: AppTheme.greyText,
-                            ),
-                          ),
+            // Image
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
+              child: imageUrl != null
+                  ? CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      height: 115,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => Container(
+                        height: 115,
+                        color: AppTheme.lightGrey.withValues(alpha: 0.5),
+                        child: const Center(
+                          child: Icon(Icons.restaurant, color: AppTheme.greyText),
                         ),
-                ),
-                // Fulfillment badges
-                Positioned(
-                  top: 8,
-                  left: 8,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          if (meal.fulfillmentModes.contains('pickup'))
-                            _Badge(
-                              label: 'Pickup',
-                              color: AppTheme.primaryOrange,
-                            ),
-                          if (meal.fulfillmentModes.contains('delivery'))
-                            Padding(
-                              padding: const EdgeInsets.only(left: 4),
-                              child: _Badge(
-                                label: 'Delivery',
-                                color: AppTheme.primaryOrange,
-                              ),
-                            ),
-                        ],
                       ),
-                      if (_isNewMeal(meal.createdAt))
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(6),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.15),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 1),
-                                ),
-                              ],
-                            ),
-                            child: const Text(
-                              'NEW',
-                              style: TextStyle(
-                                color: AppTheme.primaryOrange,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
+                      errorWidget: (_, __, ___) => Container(
+                        height: 115,
+                        color: AppTheme.lightGrey.withValues(alpha: 0.5),
+                        child: const Center(
+                          child: Icon(Icons.restaurant, color: AppTheme.greyText),
                         ),
-                    ],
-                  ),
-                ),
-                // Discount badge
-                if (meal.discountPercentage > 0)
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: _Badge(
-                      label: '${meal.discountPercentage.toStringAsFixed(0)}% OFF',
-                      color: AppTheme.successGreen,
+                      ),
+                    )
+                  : Container(
+                      height: 115,
+                      color: AppTheme.lightGrey.withValues(alpha: 0.5),
+                      child: const Center(
+                        child: Icon(Icons.restaurant, size: 40, color: AppTheme.greyText),
+                      ),
                     ),
-                  ),
-              ],
             ),
 
             // Content
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      meal.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.darkText,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Expanded(
-                          child: Text(
-                            'by ${meal.cookDisplayName}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.greyText,
-                            ),
+                        Text(
+                          meal.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.darkText,
+                            height: 1.2,
                           ),
                         ),
-                        if (meal.category.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryOrange
-                                  .withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              meal.category[0].toUpperCase() +
-                                  meal.category.substring(1),
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.primaryOrange,
-                              ),
-                            ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'by ${meal.cookDisplayName}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.greyText,
+                            height: 1.2,
                           ),
+                        ),
                       ],
                     ),
-                    const Spacer(),
                     Row(
                       children: [
-                        const Icon(
-                          Icons.star,
-                          size: 14,
-                          color: AppTheme.primaryOrange,
-                        ),
+                        const Icon(Icons.star, size: 13, color: AppTheme.primaryOrange),
                         const SizedBox(width: 2),
                         Text(
                           meal.avgRating.toStringAsFixed(1),
                           style: const TextStyle(
-                            fontSize: 12,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
+                            height: 1.2,
                           ),
                         ),
                         const Spacer(),
-                        if (meal.discountPercentage > 0) ...[
-                          Text(
-                            '${currencySymbol(meal.currency)}${meal.price.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: AppTheme.greyText,
-                              decoration: TextDecoration.lineThrough,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                        ],
                         Text(
                           '${currencySymbol(meal.currency)}${meal.effectivePrice.toStringAsFixed(2)}',
                           style: const TextStyle(
-                            fontSize: 15,
+                            fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.primaryOrange,
+                            height: 1.2,
                           ),
                         ),
                       ],
@@ -917,34 +704,6 @@ bool _isNewMeal(String createdAt) {
     return DateTime.now().difference(created).inDays <= 7;
   } catch (_) {
     return false;
-  }
-}
-
-// ─── Badge ──────────────────────────────────────────────────────────────────
-
-class _Badge extends StatelessWidget {
-  final String label;
-  final Color color;
-
-  const _Badge({required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
   }
 }
 
