@@ -1489,39 +1489,6 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                         ),
                       ),
                       // Badges on image
-                      Positioned(
-                        bottom: 12,
-                        left: 16,
-                        child: Row(
-                          children: [
-                            // Veg/Non-veg indicator
-                            _MealTypeBadge(mealType: meal.mealType),
-                            if (meal.fulfillmentModes.isNotEmpty) ...[
-                              const SizedBox(width: 8),
-                              ...meal.fulfillmentModes.map((mode) => Padding(
-                                padding: const EdgeInsets.only(right: 6),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: mode == 'pickup'
-                                        ? AppTheme.primaryOrange
-                                        : AppTheme.successGreen,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    mode == 'pickup' ? 'Pickup' : 'Delivery',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              )),
-                            ],
-                          ],
-                        ),
-                      ),
                       // Discount badge
                       if (meal.discountPercentage > 0)
                         Positioned(
@@ -1628,48 +1595,6 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // ─── Category & Type Chips ────────────────────
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          if (meal.category.isNotEmpty)
-                            _CategoryChip(
-                              icon: Icons.restaurant_menu,
-                              label: meal.category
-                                  .replaceAll('_', ' ')
-                                  .split(' ')
-                                  .map((w) => w.isNotEmpty
-                                      ? '${w[0].toUpperCase()}${w.substring(1)}'
-                                      : '')
-                                  .join(' '),
-                            ),
-                          if (meal.mealType.isNotEmpty)
-                            _CategoryChip(
-                              icon: meal.mealType == 'breakfast'
-                                  ? Icons.free_breakfast_outlined
-                                  : meal.mealType == 'lunch'
-                                      ? Icons.lunch_dining
-                                      : meal.mealType == 'dinner'
-                                          ? Icons.dinner_dining
-                                          : Icons.restaurant,
-                              label: meal.mealType[0].toUpperCase() +
-                                  meal.mealType.substring(1),
-                            ),
-                          if (meal.cuisineType.isNotEmpty)
-                            _CategoryChip(
-                              icon: Icons.public,
-                              label: meal.cuisineType
-                                  .replaceAll('_', ' ')
-                                  .split(' ')
-                                  .map((w) => w.isNotEmpty
-                                      ? '${w[0].toUpperCase()}${w.substring(1)}'
-                                      : '')
-                                  .join(' '),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
 
                       // ─── Quick Info Strip (Rating + Orders only) ──
                       Container(
@@ -1701,6 +1626,15 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                                 iconColor: AppTheme.greyText,
                                 label: meal.servingSize,
                                 sublabel: 'Serving',
+                              ),
+                            ],
+                            if (meal.spiceLevel.isNotEmpty) ...[
+                              _divider(),
+                              _InfoItem(
+                                icon: Icons.whatshot_outlined,
+                                iconColor: Colors.deepOrange,
+                                label: meal.spiceLevel[0].toUpperCase() + meal.spiceLevel.substring(1).replaceAll('_', ' '),
+                                sublabel: 'Spice',
                               ),
                             ],
                           ],
@@ -1753,28 +1687,74 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                         const SizedBox(height: 16),
                       ],
 
-                      // ─── Available Days ───────────────────────────
-                      if (meal.availableDays.isNotEmpty) ...[
-                        _sectionTitle('Available On'),
-                        const SizedBox(height: 10),
-                        _buildAvailableDays(meal.availableDays),
+                      // ─── Description ──────────────────────────────
+                      if (meal.description.isNotEmpty) ...[
+                        Text(
+                          meal.description,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.greyText,
+                            height: 1.55,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // ─── Includes (bullet points) ──────────────────
+                      if (meal.includes.isNotEmpty) ...[
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: meal.includes.map((item) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 6),
+                                  child: Icon(Icons.circle, size: 6, color: AppTheme.primaryOrange),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  item,
+                                  style: const TextStyle(fontSize: 14, color: AppTheme.darkText),
+                                ),
+                              ],
+                            ),
+                          )).toList(),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+
+                      // ─── Category + Tags chips ────────────────────
+                      if (meal.category.isNotEmpty || meal.mealType.isNotEmpty ||
+                          meal.cuisineType.isNotEmpty || meal.tags.isNotEmpty) ...[
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            if (meal.category.isNotEmpty)
+                              _TagChip(label: meal.category.replaceAll('_', ' ')),
+                            if (meal.mealType.isNotEmpty)
+                              _TagChip(label: meal.mealType.replaceAll('_', ' ')),
+                            if (meal.cuisineType.isNotEmpty)
+                              _TagChip(label: meal.cuisineType.replaceAll('_', ' ')),
+                            ...meal.tags.map((tag) => _TagChip(label: tag.replaceAll('_', ' '))),
+                          ],
+                        ),
                         const SizedBox(height: 20),
                       ],
 
-                      // --- NEW ADDED CODE START ---
-                      // ─── Extras / Add-ons ─────────────────────────
-                      if (meal.extras.isNotEmpty) ...[
-                        _sectionTitle('Extras & Add-ons'),
+                      // ─── Add Ons ──────────────────────────────────
+                      if (meal.extras.where((e) => e.isAvailable).isNotEmpty) ...[
+                        _sectionTitle('Add Ons'),
                         const SizedBox(height: 10),
                         Column(
                           children: meal.extras.where((e) => e.isAvailable).map((extra) {
                             final quantity = _extraQuantities[extra.id] ?? 0;
-                            
-                            // Determine color based on type
                             final isVeg = extra.itemType == 'veg';
                             final isEgg = extra.itemType == 'egg';
-                            final typeColor = isVeg 
-                                ? Colors.green.shade600 
+                            final typeColor = isVeg
+                                ? Colors.green.shade600
                                 : (isEgg ? Colors.amber.shade700 : Colors.red.shade600);
 
                             return Container(
@@ -1798,7 +1778,6 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                               ),
                               child: Row(
                                 children: [
-                                  // Custom Veg/Non-Veg Symbol
                                   Container(
                                     width: 16,
                                     height: 16,
@@ -1835,15 +1814,12 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                                           '+${currencySymbol(extra.currency)}${extra.price.toStringAsFixed(2)}',
                                           style: const TextStyle(
                                             fontSize: 13,
-                                            fontWeight: FontWeight.w600,
                                             color: AppTheme.greyText,
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                  
-                                  // Quantity Controls
                                   Row(
                                     children: [
                                       if (quantity > 0) ...[
@@ -1887,29 +1863,44 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                         ),
                         const SizedBox(height: 20),
                       ],
-                      // --- NEW ADDED CODE END ---
 
-                      // ─── Tags ─────────────────────────────────────
-                      if (meal.tags.isNotEmpty) ...[
+                      // ─── Fulfillment ───────────────────────────────
+                      if (meal.fulfillmentModes.isNotEmpty) ...[
+                        _sectionTitle('Fulfillment'),
+                        const SizedBox(height: 10),
                         Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: meal.tags.map((tag) {
+                          spacing: 10,
+                          runSpacing: 8,
+                          children: meal.fulfillmentModes.map((mode) {
+                            final isPickup = mode == 'pickup';
                             return Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 5,
-                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                               decoration: BoxDecoration(
-                                color: AppTheme.lightGrey,
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Text(
-                                '#${tag.replaceAll('_', ' ')}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppTheme.greyText,
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: isPickup ? AppTheme.primaryOrange : AppTheme.successGreen,
+                                  width: 1.2,
                                 ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isPickup ? Icons.store_outlined : Icons.delivery_dining_outlined,
+                                    size: 18,
+                                    color: isPickup ? AppTheme.primaryOrange : AppTheme.successGreen,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    isPickup ? 'Pickup' : 'Delivery',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: isPickup ? AppTheme.primaryOrange : AppTheme.successGreen,
+                                    ),
+                                  ),
+                                ],
                               ),
                             );
                           }).toList(),
@@ -1917,7 +1908,15 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                         const SizedBox(height: 20),
                       ],
 
-                      // ─── Allergen Warning ─────────────────────────
+                      // ─── Available Days ───────────────────────────
+                      if (meal.availableDays.isNotEmpty) ...[
+                        _sectionTitle('Available On'),
+                        const SizedBox(height: 10),
+                        _buildAvailableDays(meal.availableDays),
+                        const SizedBox(height: 20),
+                      ],
+
+                      // ─── Allergen Warning (kept for safety) ───────
                       if (meal.allergenInfo.isNotEmpty) ...[
                         Container(
                           padding: const EdgeInsets.all(16),
@@ -1982,63 +1981,8 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                         const SizedBox(height: 20),
                       ],
 
-                      // ─── What Cook Provides ──────────────────────
-                      _sectionTitle('What\'s Included'),
-                      const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            if (meal.description.isNotEmpty) ...[
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Icon(Icons.description_outlined, size: 18, color: AppTheme.primaryOrange),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      meal.description,
-                                      style: const TextStyle(fontSize: 13, color: AppTheme.darkText, height: 1.4),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const Divider(height: 20),
-                            ],
-                            _cookProvidesRow(Icons.local_shipping_outlined, 'Fulfillment',
-                                meal.fulfillmentModes.map((m) => m == 'pickup' ? 'Pickup' : 'Delivery').join(' & ')),
-                            if (meal.cookCard.deliveryEnabled) ...[
-                              const SizedBox(height: 8),
-                              _cookProvidesRow(Icons.straighten, 'Delivery Radius',
-                                  '${meal.cookCard.deliveryRadiusKm.toStringAsFixed(1)} km'),
-                            ],
-                            if (meal.servingSize.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              _cookProvidesRow(Icons.restaurant_outlined, 'Serving Size', meal.servingSize),
-                            ],
-                            if (meal.spiceLevel.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              _cookProvidesRow(Icons.whatshot_outlined, 'Spice Level',
-                                  meal.spiceLevel[0].toUpperCase() + meal.spiceLevel.substring(1)),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // ─── Your Cook ────────────────────────────────
-                      _sectionTitle('Your Cook'),
+                      // ─── Cook ─────────────────────────────────────
+                      _sectionTitle('Cook'),
                       const SizedBox(height: 12),
                       GestureDetector(
                         onTap: () {
@@ -2705,6 +2649,34 @@ class _CategoryChip extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TagChip extends StatelessWidget {
+  final String label;
+
+  const _TagChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryOrange.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppTheme.primaryOrange.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Text(
+        '#$label',
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: AppTheme.primaryOrange,
+        ),
       ),
     );
   }

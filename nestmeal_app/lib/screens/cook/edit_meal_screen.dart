@@ -1044,6 +1044,8 @@ class _EditMealScreenState extends State<EditMealScreen> {
   late final TextEditingController _caloriesController;
   late final TextEditingController _prepTimeController;
   late final TextEditingController _tagsController;
+  late final TextEditingController _includesInputController;
+  final List<String> _includeItems = [];
 
   late String _selectedCategory;
   late String _selectedMealType;
@@ -1105,6 +1107,7 @@ class _EditMealScreenState extends State<EditMealScreen> {
     _caloriesController = TextEditingController();
     _prepTimeController = TextEditingController();
     _tagsController = TextEditingController();
+    _includesInputController = TextEditingController();
 
     _selectedCategory = 'lunch';
     _selectedMealType = 'veg';
@@ -1164,6 +1167,9 @@ class _EditMealScreenState extends State<EditMealScreen> {
       _isAvailable = m.isAvailable;
       
       _existingExtras = m.extras;
+      _includeItems
+        ..clear()
+        ..addAll(m.includes);
 
       _isLoadingDetail = false;
     });
@@ -1180,6 +1186,7 @@ class _EditMealScreenState extends State<EditMealScreen> {
     _caloriesController.dispose();
     _prepTimeController.dispose();
     _tagsController.dispose();
+    _includesInputController.dispose();
     super.dispose();
   }
 
@@ -1497,6 +1504,7 @@ class _EditMealScreenState extends State<EditMealScreen> {
       'tags': _tagsController.text.trim().isNotEmpty
           ? _tagsController.text.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList()
           : <String>[],
+      'includes': _includeItems,
     };
 
     try {
@@ -1798,6 +1806,71 @@ class _EditMealScreenState extends State<EditMealScreen> {
                         return null;
                       },
                     ),
+                    const SizedBox(height: 16),
+
+                    // What's Included
+                    _buildSectionLabel('What\'s Included'),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Add items included with this meal (e.g. onion, lemon, raita)',
+                      style: TextStyle(fontSize: 12, color: AppTheme.greyText),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _includesInputController,
+                            textCapitalization: TextCapitalization.sentences,
+                            decoration: const InputDecoration(
+                              hintText: 'e.g. Raita',
+                              isDense: true,
+                            ),
+                            onFieldSubmitted: (_) {
+                              final val = _includesInputController.text.trim();
+                              if (val.isNotEmpty) {
+                                setState(() {
+                                  _includeItems.add(val);
+                                  _includesInputController.clear();
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: () {
+                            final val = _includesInputController.text.trim();
+                            if (val.isNotEmpty) {
+                              setState(() {
+                                _includeItems.add(val);
+                                _includesInputController.clear();
+                              });
+                            }
+                          },
+                          icon: const Icon(Icons.add_circle, color: AppTheme.primaryOrange, size: 28),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    if (_includeItems.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: _includeItems.asMap().entries.map((entry) {
+                          return Chip(
+                            label: Text(entry.value),
+                            deleteIcon: const Icon(Icons.close, size: 14),
+                            onDeleted: () => setState(() => _includeItems.removeAt(entry.key)),
+                            backgroundColor: AppTheme.primaryOrange.withValues(alpha: 0.1),
+                            labelStyle: const TextStyle(fontSize: 13),
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          );
+                        }).toList(),
+                      ),
+                    ],
                     const SizedBox(height: 16),
 
                     Row(

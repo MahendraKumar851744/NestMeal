@@ -60,6 +60,7 @@ class Meal(models.Model):
     total_orders = models.IntegerField(default=0)
     avg_rating = models.DecimalField(max_digits=3, decimal_places=2, default=5.00)
     tags = models.JSONField(default=list, blank=True)
+    includes = models.JSONField(default=list, blank=True, help_text='List of items included with the meal, e.g. ["onion", "lemon", "raita"]')
     is_featured = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='draft')
     created_at = models.DateTimeField(auto_now_add=True)

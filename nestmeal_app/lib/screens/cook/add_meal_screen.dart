@@ -43,6 +43,8 @@ class _AddMealScreenState extends State<AddMealScreen> {
   final _caloriesController = TextEditingController();
   final _prepTimeController = TextEditingController(text: '30');
   final _tagsController = TextEditingController();
+  final _includesInputController = TextEditingController();
+  final List<String> _includeItems = [];
 
   String _selectedCategory = 'lunch';
   String _selectedMealType = 'veg';
@@ -96,6 +98,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
     _caloriesController.dispose();
     _prepTimeController.dispose();
     _tagsController.dispose();
+    _includesInputController.dispose();
     super.dispose();
   }
 
@@ -273,6 +276,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
       'tags': _tagsController.text.trim().isNotEmpty
           ? _tagsController.text.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList()
           : <String>[],
+      'includes': _includeItems,
     };
 
     // final caloriesText = _caloriesController.text.trim();
@@ -339,6 +343,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
         _selectedFulfillmentModes.add('pickup');
         _selectedDays.clear();
         _addOns.clear();
+        _includeItems.clear();
       });
     } catch (e) {
       if (!mounted) return;
@@ -484,6 +489,71 @@ class _AddMealScreenState extends State<AddMealScreen> {
                   return null;
                 },
               ),
+              const SizedBox(height: 16),
+
+              // What's Included (bullet point items)
+              _buildSectionLabel('What\'s Included'),
+              const SizedBox(height: 4),
+              Text(
+                'Add items included with this meal (e.g. onion, lemon, raita)',
+                style: TextStyle(fontSize: 12, color: AppTheme.greyText),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _includesInputController,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: const InputDecoration(
+                        hintText: 'e.g. Raita',
+                        isDense: true,
+                      ),
+                      onFieldSubmitted: (_) {
+                        final val = _includesInputController.text.trim();
+                        if (val.isNotEmpty) {
+                          setState(() {
+                            _includeItems.add(val);
+                            _includesInputController.clear();
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: () {
+                      final val = _includesInputController.text.trim();
+                      if (val.isNotEmpty) {
+                        setState(() {
+                          _includeItems.add(val);
+                          _includesInputController.clear();
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.add_circle, color: AppTheme.primaryOrange, size: 28),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+              if (_includeItems.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: _includeItems.asMap().entries.map((entry) {
+                    return Chip(
+                      label: Text(entry.value),
+                      deleteIcon: const Icon(Icons.close, size: 14),
+                      onDeleted: () => setState(() => _includeItems.removeAt(entry.key)),
+                      backgroundColor: AppTheme.primaryOrange.withValues(alpha: 0.1),
+                      labelStyle: const TextStyle(fontSize: 13),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    );
+                  }).toList(),
+                ),
+              ],
               const SizedBox(height: 16),
 
               // Price and Discount row

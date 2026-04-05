@@ -172,6 +172,7 @@ class MealModel {
   final int totalOrders;
   final double avgRating;
   final List<String> tags;
+  final List<String> includes;
   final bool isFeatured;
   final String status;
   final List<MealImage> images;
@@ -208,6 +209,7 @@ class MealModel {
     required this.totalOrders,
     required this.avgRating,
     required this.tags,
+    this.includes = const [],
     required this.isFeatured,
     required this.status,
     required this.images,
@@ -242,6 +244,7 @@ class MealModel {
       totalOrders: json['total_orders'] ?? 0,
       avgRating: toSafeDouble(json['avg_rating']),
       tags: List<String>.from(json['tags'] ?? []),
+      includes: List<String>.from(json['includes'] ?? []),
       isFeatured: json['is_featured'] ?? false,
       status: json['status'] ?? '',
       images: (json['images'] as List?)
@@ -287,6 +290,7 @@ class MealModel {
       'total_orders': totalOrders,
       'avg_rating': avgRating,
       'tags': tags,
+      'includes': includes,
       'is_featured': isFeatured,
       'status': status,
       'images': images.map((img) => img.toJson()).toList(),
@@ -327,6 +331,7 @@ class MealDetail extends MealModel {
     required super.totalOrders,
     required super.avgRating,
     required super.tags,
+    super.includes,
     required super.isFeatured,
     required super.status,
     required super.images,
@@ -368,6 +373,7 @@ class MealDetail extends MealModel {
       totalOrders: json['total_orders'] ?? 0,
       avgRating: toSafeDouble(json['avg_rating']),
       tags: List<String>.from(json['tags'] ?? []),
+      includes: List<String>.from(json['includes'] ?? []),
       isFeatured: json['is_featured'] ?? false,
       status: json['status'] ?? '',
       images: (json['images'] as List?)
