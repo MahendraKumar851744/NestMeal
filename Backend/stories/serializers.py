@@ -5,6 +5,7 @@ from .models import Story, StoryView
 class StorySerializer(serializers.ModelSerializer):
     cook_id = serializers.UUIDField(source='cook.id', read_only=True)
     cook_display_name = serializers.CharField(source='cook.display_name', read_only=True)
+    cook_profile_image_url = serializers.SerializerMethodField()
     image_url = serializers.SerializerMethodField()
     is_viewed = serializers.SerializerMethodField()
     view_count = serializers.SerializerMethodField()
@@ -12,12 +13,18 @@ class StorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Story
         fields = [
-            'id', 'cook_id', 'cook_display_name',
+            'id', 'cook_id', 'cook_display_name', 'cook_profile_image_url',
             'image_url', 'caption',
             'created_at', 'expires_at', 'is_active',
             'is_viewed', 'view_count',
         ]
         read_only_fields = ['id', 'created_at', 'expires_at', 'is_active']
+
+    def get_cook_profile_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.cook.profile_image and request:
+            return request.build_absolute_uri(obj.cook.profile_image.url)
+        return obj.cook.profile_image.url if obj.cook.profile_image else None
 
     def get_image_url(self, obj):
         request = self.context.get('request')

@@ -1,6 +1,4 @@
 import uuid
-import random
-import string
 from django.db import models
 from accounts.models import User, CookProfile
 from meals.models import Meal, PickupSlot
@@ -103,7 +101,7 @@ class Order(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.order_number:
-            self.order_number = self._generate_short_order_number()
+            self.order_number = self._generate_order_number()
         if self.fulfillment_type == 'pickup' and not self.pickup_code:
             self.pickup_code = ''.join(random.choices(string.digits, k=6))
         # Set acceptance deadline for new orders (2 minutes)
@@ -114,17 +112,24 @@ class Order(models.Model):
         super().save(*args, **kwargs)
 
     @staticmethod
-    def _generate_short_order_number():
-        """Generate a short order number like HB-A1B2 for easy verification."""
-        chars = string.ascii_uppercase + string.digits
-        for _ in range(20):
-            code = ''.join(random.choices(chars, k=4))
-            candidate = f"HB-{code}"
-            if not Order.objects.filter(order_number=candidate).exists():
-                return candidate
-        # Fallback: 6-char code if 4-char space is crowded
-        code = ''.join(random.choices(chars, k=6))
-        return f"HB-{code}"
+    def _generate_order_number():
+        """Generate a sequential order number: NM-001, NM-002, ..., NM-999, NM-1000, ..."""
+        existing = Order.objects.filter(
+            order_number__startswith='NM-'
+        ).values_list('order_number', flat=True)
+
+        highest = 0
+        for num_str in existing:
+            try:
+                n = int(num_str[3:])  # strip 'NM-'
+                if n > highest:
+                    highest = n
+            except ValueError:
+                pass
+
+        next_n = highest + 1
+        # Minimum 3 digits (001-999), then grows naturally (1000, 10000, ...)
+        return f"NM-{str(next_n).zfill(3)}"
 
 
 class OrderMessage(models.Model):
@@ -165,6 +170,11 @@ class OrderItem(models.Model):
     quantity = models.IntegerField(default=1)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     line_total = models.DecimalField(max_digits=10, decimal_places=2)
+    extras = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='Snapshot of selected extras: [{"id": "...", "name": "...", "price": "1.50", "quantity": 2}]',
+    )
 
     class Meta:
         db_table = 'order_items'

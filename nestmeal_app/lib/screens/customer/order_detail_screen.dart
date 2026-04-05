@@ -1,8 +1,11 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+
+import '../../config/theme.dart';
 
 import '../../models/order_model.dart';
 import '../../providers/order_provider.dart';
@@ -184,16 +187,21 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     radius: 20,
                     backgroundColor:
                         const Color(0xFFF97316).withOpacity(0.12),
-                    child: Text(
-                      order.cookDisplayName.isNotEmpty
-                          ? order.cookDisplayName[0].toUpperCase()
-                          : 'C',
-                      style: const TextStyle(
-                        color: Color(0xFFF97316),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                      ),
-                    ),
+                    backgroundImage: order.cookProfileImageUrl != null
+                        ? CachedNetworkImageProvider(order.cookProfileImageUrl!)
+                        : null,
+                    child: order.cookProfileImageUrl == null
+                        ? Text(
+                            order.cookDisplayName.isNotEmpty
+                                ? order.cookDisplayName[0].toUpperCase()
+                                : 'C',
+                            style: const TextStyle(
+                              color: Color(0xFFF97316),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          )
+                        : null,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -509,38 +517,75 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         child: Column(
           children: order.items.map((item) {
             return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.mealTitle,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.mealTitle,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'x${item.quantity} · \$${item.unitPrice.toStringAsFixed(2)} each',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${item.quantity} x \$${item.unitPrice.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey[500],
-                          ),
+                      ),
+                      Text(
+                        '\$${item.lineTotal.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  Text(
-                    '\$${item.lineTotal.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  if (item.extras.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    ...item.extras.map((extra) => Padding(
+                          padding: const EdgeInsets.only(left: 12, bottom: 3),
+                          child: Row(
+                            children: [
+                              const Text('+ ',
+                                  style: TextStyle(
+                                      color: AppTheme.primaryOrange,
+                                      fontSize: 12)),
+                              Expanded(
+                                child: Text(
+                                  '${extra.name} x${extra.quantity}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppTheme.greyText,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                '\$${extra.subtotal.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.greyText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                  ],
+                  if (item != order.items.last)
+                    const Divider(height: 12, color: Color(0xFFF0F0F0)),
                 ],
               ),
             );

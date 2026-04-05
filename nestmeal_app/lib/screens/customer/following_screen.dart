@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -129,16 +130,21 @@ class _FollowingCookCard extends StatelessWidget {
               radius: 28,
               backgroundColor:
                   AppTheme.primaryOrange.withValues(alpha: 0.12),
-              child: Text(
-                cook.displayName.isNotEmpty
-                    ? cook.displayName[0].toUpperCase()
-                    : 'C',
-                style: GoogleFonts.playfairDisplay(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.primaryOrange,
-                ),
-              ),
+              backgroundImage: cook.profileImageUrl != null
+                  ? CachedNetworkImageProvider(cook.profileImageUrl!)
+                  : null,
+              child: cook.profileImageUrl == null
+                  ? Text(
+                      cook.displayName.isNotEmpty
+                          ? cook.displayName[0].toUpperCase()
+                          : 'C',
+                      style: GoogleFonts.playfairDisplay(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.primaryOrange,
+                      ),
+                    )
+                  : null,
             ),
             const SizedBox(width: 14),
             Expanded(

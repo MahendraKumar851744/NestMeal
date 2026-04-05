@@ -1,4 +1,27 @@
+import '../config/api_config.dart';
 import 'helpers.dart';
+
+class OrderItemExtra {
+  final String name;
+  final double price;
+  final int quantity;
+
+  OrderItemExtra({
+    required this.name,
+    required this.price,
+    required this.quantity,
+  });
+
+  double get subtotal => price * quantity;
+
+  factory OrderItemExtra.fromJson(Map<String, dynamic> json) {
+    return OrderItemExtra(
+      name: json['name'] ?? '',
+      price: toSafeDouble(json['price']),
+      quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+    );
+  }
+}
 
 class OrderItem {
   final String id;
@@ -7,6 +30,7 @@ class OrderItem {
   final int quantity;
   final double unitPrice;
   final double lineTotal;
+  final List<OrderItemExtra> extras;
 
   OrderItem({
     required this.id,
@@ -15,6 +39,7 @@ class OrderItem {
     required this.quantity,
     required this.unitPrice,
     required this.lineTotal,
+    this.extras = const [],
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
@@ -25,6 +50,9 @@ class OrderItem {
       quantity: json['quantity'] ?? 0,
       unitPrice: toSafeDouble(json['unit_price']),
       lineTotal: toSafeDouble(json['line_total']),
+      extras: (json['extras'] as List<dynamic>? ?? [])
+          .map((e) => OrderItemExtra.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 
@@ -48,6 +76,7 @@ class OrderListItem {
   final String fulfillmentType;
   final String createdAt;
   final String cookDisplayName;
+  final String? cookProfileImageUrl;
   final String? pickupCode;
   final String? acceptanceDeadline;
 
@@ -59,6 +88,7 @@ class OrderListItem {
     required this.fulfillmentType,
     required this.createdAt,
     required this.cookDisplayName,
+    this.cookProfileImageUrl,
     this.pickupCode,
     this.acceptanceDeadline,
   });
@@ -72,6 +102,7 @@ class OrderListItem {
       fulfillmentType: json['fulfillment_type'] ?? '',
       createdAt: json['created_at'] ?? '',
       cookDisplayName: json['cook_display_name'] ?? '',
+      cookProfileImageUrl: ApiConfig.absoluteUrl(json['cook_profile_image_url']),
       pickupCode: json['pickup_code'],
       acceptanceDeadline: json['acceptance_deadline'],
     );
@@ -97,6 +128,7 @@ class OrderModel {
   final String customerName;
   final String cookId;
   final String cookDisplayName;
+  final String? cookProfileImageUrl;
   final String status;
   final String fulfillmentType;
   final double subtotal;
@@ -140,6 +172,7 @@ class OrderModel {
     required this.customerName,
     required this.cookId,
     required this.cookDisplayName,
+    this.cookProfileImageUrl,
     required this.status,
     required this.fulfillmentType,
     required this.subtotal,
@@ -185,6 +218,7 @@ class OrderModel {
       customerName: json['customer_name'] ?? '',
       cookId: json['cook']?.toString() ?? json['cook_id']?.toString() ?? '',
       cookDisplayName: json['cook_display_name'] ?? '',
+      cookProfileImageUrl: ApiConfig.absoluteUrl(json['cook_profile_image_url']),
       status: json['status'] ?? '',
       fulfillmentType: json['fulfillment_type'] ?? '',
       subtotal: toSafeDouble(json['item_total'] ?? json['subtotal']),

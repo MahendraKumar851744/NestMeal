@@ -195,8 +195,38 @@ class CookProfileViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @action(
-        detail=True, 
-        methods=['post'], 
+        detail=True,
+        methods=['post'],
+        permission_classes=[IsAuthenticated, IsCook | IsAdmin],
+        url_path='upload-image',
+    )
+    def upload_image(self, request, pk=None):
+        """POST /cook-profiles/<id>/upload-image/ -- Upload or replace cook profile image."""
+        cook_profile = self.get_object()
+
+        # Cooks can only update their own profile
+        if request.user.role == 'cook' and cook_profile.user_id != request.user.id:
+            return Response({'detail': 'You can only update your own profile image.'},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        image = request.FILES.get('profile_image')
+        if not image:
+            return Response({'detail': 'No image provided. Send as multipart/form-data with key "profile_image".'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Delete old image file to avoid orphaned files
+        if cook_profile.profile_image:
+            cook_profile.profile_image.delete(save=False)
+
+        cook_profile.profile_image = image
+        cook_profile.save(update_fields=['profile_image'])
+
+        serializer = self.get_serializer(cook_profile)
+        return Response(serializer.data)
+
+    @action(
+        detail=True,
+        methods=['post'],
         permission_classes=[IsAuthenticated, IsAdmin]
     )
     def approve(self, request, pk=None):

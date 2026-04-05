@@ -1308,14 +1308,26 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
     final imageUrl =
         meal.images.isNotEmpty ? meal.images.first.imageUrl : null;
 
+    // Build CartExtra list from selected quantities
+    final selectedCartExtras = meal.extras
+        .where((e) => e.isAvailable && (_extraQuantities[e.id] ?? 0) > 0)
+        .map((e) => CartExtra(
+              id: e.id,
+              name: e.name,
+              price: e.price,
+              quantity: _extraQuantities[e.id]!,
+            ))
+        .toList();
+
     final added = cart.addItem(
       meal.id,
       meal.title,
       imageUrl,
-      totalPrice,
+      meal.effectivePrice,
       meal.cookId,
       meal.cookDisplayName,
       fulfillmentModes: meal.fulfillmentModes,
+      extras: selectedCartExtras,
     );
 
     if (!added) {
@@ -1339,10 +1351,11 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                   meal.id,
                   meal.title,
                   imageUrl,
-                  totalPrice,
+                  meal.effectivePrice,
                   meal.cookId,
                   meal.cookDisplayName,
                   fulfillmentModes: meal.fulfillmentModes,
+                  extras: selectedCartExtras,
                 );
                 Navigator.pop(ctx);
                 _showAddedSnackbar();
@@ -2014,17 +2027,21 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                                 radius: 28,
                                 backgroundColor: AppTheme.primaryOrange
                                     .withValues(alpha: 0.15),
-                                child: Text(
-                                  meal.cookCard.displayName.isNotEmpty
-                                      ? meal.cookCard.displayName[0]
-                                          .toUpperCase()
-                                      : 'C',
-                                  style: GoogleFonts.playfairDisplay(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppTheme.primaryOrange,
-                                  ),
-                                ),
+                                backgroundImage: meal.cookCard.profileImageUrl != null
+                                    ? CachedNetworkImageProvider(meal.cookCard.profileImageUrl!)
+                                    : null,
+                                child: meal.cookCard.profileImageUrl == null
+                                    ? Text(
+                                        meal.cookCard.displayName.isNotEmpty
+                                            ? meal.cookCard.displayName[0].toUpperCase()
+                                            : 'C',
+                                        style: GoogleFonts.playfairDisplay(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppTheme.primaryOrange,
+                                        ),
+                                      )
+                                    : null,
                               ),
                               const SizedBox(width: 14),
                               Expanded(
@@ -2465,25 +2482,6 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
     );
   }
 
-  Widget _cookProvidesRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: AppTheme.greyText),
-        const SizedBox(width: 8),
-        Text(
-          '$label: ',
-          style: const TextStyle(fontSize: 13, color: AppTheme.greyText),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.darkText),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildAvailableDays(List<String> days) {
     const allDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
     const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -2561,95 +2559,6 @@ class _InfoItem extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _MealTypeBadge extends StatelessWidget {
-  final String mealType;
-
-  const _MealTypeBadge({required this.mealType});
-
-  @override
-  Widget build(BuildContext context) {
-    final isVeg = mealType == 'veg';
-    final isEgg = mealType == 'egg';
-    final color = isVeg
-        ? Colors.green.shade600
-        : isEgg
-            ? Colors.amber.shade700
-            : Colors.red.shade600;
-    final label = isVeg
-        ? 'Veg'
-        : isEgg
-            ? 'Egg'
-            : 'Non-Veg';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color, width: 1.5),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CategoryChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-
-  const _CategoryChip({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppTheme.primaryOrange.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppTheme.primaryOrange.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: AppTheme.primaryOrange),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.primaryOrange,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

@@ -1,3 +1,4 @@
+import '../config/api_config.dart';
 import 'helpers.dart';
 
 class UserModel {
@@ -115,6 +116,7 @@ class CookProfile {
   final String userId;
   final String displayName;
   final String bio;
+  final String? profileImageUrl;
   final String kitchenStreet;
   final String kitchenCity;
   final String kitchenState;
@@ -141,6 +143,7 @@ class CookProfile {
     required this.userId,
     required this.displayName,
     required this.bio,
+    this.profileImageUrl,
     required this.kitchenStreet,
     required this.kitchenCity,
     required this.kitchenState,
@@ -169,6 +172,7 @@ class CookProfile {
       userId: json['user'].toString(),
       displayName: json['display_name'] ?? '',
       bio: json['bio'] ?? '',
+      profileImageUrl: ApiConfig.absoluteUrl(json['profile_image_url']),
       kitchenStreet: json['kitchen_street'] ?? '',
       kitchenCity: json['kitchen_city'] ?? '',
       kitchenState: json['kitchen_state'] ?? '',

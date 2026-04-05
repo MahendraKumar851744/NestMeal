@@ -209,6 +209,28 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> uploadCookProfileImage(String cookProfileId, Uint8List bytes, String filename) async {
+    isLoading = true;
+    error = null;
+    _safeNotify();
+
+    try {
+      await _apiService.uploadFileBytes(
+        '${ApiConfig.accountsUrl}/cook-profiles/$cookProfileId/upload-image/',
+        bytes,
+        filename,
+        fieldName: 'profile_image',
+      );
+      await fetchProfile();
+    } catch (e) {
+      error = e.toString();
+      rethrow;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> changePassword(
     String oldPassword,
     String newPassword,

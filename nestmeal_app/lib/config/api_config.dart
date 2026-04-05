@@ -1,5 +1,13 @@
 class ApiConfig {
   static const String baseUrl = 'http://127.0.0.1:8000/api';
+  static const String serverRoot = 'http://127.0.0.1:8000';
+
+  /// Converts a relative media path like `/media/...` to a full URL.
+  static String? absoluteUrl(String? url) {
+    if (url == null || url.isEmpty) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return '$serverRoot$url';
+  }
   static const String accountsUrl = '$baseUrl/accounts';
   static const String mealsUrl = '$baseUrl/meals';
   static const String ordersUrl = '$baseUrl/orders';

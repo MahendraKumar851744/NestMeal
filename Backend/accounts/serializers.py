@@ -68,12 +68,22 @@ class CookProfileSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='user.full_name', read_only=True)
     followers_count = serializers.IntegerField(read_only=True, default=0)
     is_followed = serializers.BooleanField(read_only=True, default=False)
+    profile_image_url = serializers.SerializerMethodField()
+
+    def get_profile_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.profile_image and request:
+            return request.build_absolute_uri(obj.profile_image.url)
+        elif obj.profile_image:
+            return obj.profile_image.url
+        return None
 
     class Meta:
         model = CookProfile
         fields = [
             'id', 'user', 'user_email', 'full_name',
             'display_name', 'bio', 'is_available',
+            'profile_image_url',
             'kitchen_street', 'kitchen_city', 'kitchen_state', 'kitchen_zip',
             'kitchen_latitude', 'kitchen_longitude',
             'pickup_instructions',
@@ -86,8 +96,8 @@ class CookProfileSerializer(serializers.ModelSerializer):
             'is_active', 'status', 'created_at', 'updated_at',
         ]
         read_only_fields = [
-            'id', 'user', 'commission_rate', 'avg_rating', 'total_reviews',
-            'followers_count', 'is_followed',
+            'id', 'user', 'profile_image_url', 'commission_rate',
+            'avg_rating', 'total_reviews', 'followers_count', 'is_followed',
             'created_at', 'updated_at',
         ]
 

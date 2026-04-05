@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import '../config/api_config.dart';
@@ -139,6 +138,7 @@ class StoryProvider extends ChangeNotifier {
       return CookStoryGroup(
         cookId: group.cookId,
         cookDisplayName: group.cookDisplayName,
+        cookProfileImageUrl: group.cookProfileImageUrl,
         stories: updated,
       );
     }).toList();

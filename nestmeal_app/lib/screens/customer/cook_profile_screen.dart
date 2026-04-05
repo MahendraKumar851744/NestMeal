@@ -23,27 +23,23 @@ class CookProfileScreen extends StatefulWidget {
   State<CookProfileScreen> createState() => _CookProfileScreenState();
 }
 
-class _CookProfileScreenState extends State<CookProfileScreen>
-    with SingleTickerProviderStateMixin {
+class _CookProfileScreenState extends State<CookProfileScreen> {
   bool _isLoading = true;
   bool _isFollowLoading = false;
   CookCard? _cook;
   List<MealModel> _cookMeals = [];
   List<ReviewModel> _reviews = [];
   List<StoryModel> _stories = [];
-  late TabController _tabController;
   final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadCookData());
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -166,9 +162,10 @@ class _CookProfileScreenState extends State<CookProfileScreen>
 
     return Scaffold(
       backgroundColor: AppTheme.warmCream,
-      body: NestedScrollView(
+      body: CustomScrollView(
         controller: _scrollController,
-        headerSliverBuilder: (context, innerBoxIsScrolled) => [
+        slivers: [
+          // App bar
           SliverAppBar(
             pinned: true,
             backgroundColor: AppTheme.warmCream,
@@ -191,49 +188,57 @@ class _CookProfileScreenState extends State<CookProfileScreen>
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 16),
 
                   // Avatar with story ring
-                  GestureDetector(
-                    onTap: hasStories ? _openStoryViewer : null,
-                    child: Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: hasStories
-                          ? BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                colors: [
-                                  AppTheme.primaryOrange,
-                                  Colors.deepOrange.shade700,
-                                  Colors.orange.shade400,
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                            )
-                          : null,
+                  Center(
+                    child: GestureDetector(
+                      onTap: hasStories ? _openStoryViewer : null,
                       child: Container(
-                        padding: hasStories ? const EdgeInsets.all(2) : null,
+                        padding: const EdgeInsets.all(3),
                         decoration: hasStories
-                            ? const BoxDecoration(
+                            ? BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: AppTheme.warmCream,
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppTheme.primaryOrange,
+                                    Colors.deepOrange.shade700,
+                                    Colors.orange.shade400,
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
                               )
                             : null,
-                        child: CircleAvatar(
-                          radius: 50,
-                          backgroundColor:
-                              AppTheme.primaryOrange.withValues(alpha: 0.15),
-                          child: Text(
-                            cookName.isNotEmpty
-                                ? cookName[0].toUpperCase()
-                                : 'C',
-                            style: GoogleFonts.playfairDisplay(
-                              fontSize: 40,
-                              fontWeight: FontWeight.w700,
-                              color: AppTheme.primaryOrange,
-                            ),
+                        child: Container(
+                          padding: hasStories ? const EdgeInsets.all(2) : null,
+                          decoration: hasStories
+                              ? const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppTheme.warmCream,
+                                )
+                              : null,
+                          child: CircleAvatar(
+                            radius: 50,
+                            backgroundColor:
+                                AppTheme.primaryOrange.withValues(alpha: 0.15),
+                            backgroundImage: _cook?.profileImageUrl != null
+                                ? CachedNetworkImageProvider(_cook!.profileImageUrl!)
+                                : null,
+                            child: _cook?.profileImageUrl == null
+                                ? Text(
+                                    cookName.isNotEmpty
+                                        ? cookName[0].toUpperCase()
+                                        : 'C',
+                                    style: GoogleFonts.playfairDisplay(
+                                      fontSize: 40,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppTheme.primaryOrange,
+                                    ),
+                                  )
+                                : null,
                           ),
                         ),
                       ),
@@ -242,32 +247,36 @@ class _CookProfileScreenState extends State<CookProfileScreen>
                   const SizedBox(height: 12),
 
                   // Name
-                  Text(
-                    cookName,
-                    style: GoogleFonts.playfairDisplay(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.darkText,
+                  Center(
+                    child: Text(
+                      cookName,
+                      style: GoogleFonts.playfairDisplay(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.darkText,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),
 
                   // Location
                   if (cook != null && cook.kitchenCity.isNotEmpty)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.location_on_outlined,
-                            size: 16, color: AppTheme.greyText),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${cook.kitchenCity}${cook.kitchenState.isNotEmpty ? ', ${cook.kitchenState}' : ''}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: AppTheme.greyText,
+                    Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.location_on_outlined,
+                              size: 16, color: AppTheme.greyText),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${cook.kitchenCity}${cook.kitchenState.isNotEmpty ? ', ${cook.kitchenState}' : ''}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: AppTheme.greyText,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   const SizedBox(height: 16),
 
@@ -280,8 +289,7 @@ class _CookProfileScreenState extends State<CookProfileScreen>
                                 height: 44,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                      color: AppTheme.primaryOrange),
+                                  border: Border.all(color: AppTheme.primaryOrange),
                                 ),
                                 child: const Center(
                                   child: SizedBox(
@@ -302,8 +310,7 @@ class _CookProfileScreenState extends State<CookProfileScreen>
                                       : Icons.person_add_outlined,
                                   size: 18,
                                 ),
-                                label: Text(
-                                    isFollowed ? 'Following' : 'Follow'),
+                                label: Text(isFollowed ? 'Following' : 'Follow'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: isFollowed
                                       ? AppTheme.primaryOrange
@@ -312,13 +319,11 @@ class _CookProfileScreenState extends State<CookProfileScreen>
                                       ? Colors.white
                                       : AppTheme.primaryOrange,
                                   elevation: 0,
-                                  side: const BorderSide(
-                                      color: AppTheme.primaryOrange),
+                                  side: const BorderSide(color: AppTheme.primaryOrange),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 12),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
                                 ),
                               ),
                       ),
@@ -326,7 +331,6 @@ class _CookProfileScreenState extends State<CookProfileScreen>
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () {
-                            _tabController.animateTo(0);
                             if (_scrollController.hasClients) {
                               _scrollController.animateTo(
                                 _scrollController.position.maxScrollExtent,
@@ -344,8 +348,7 @@ class _CookProfileScreenState extends State<CookProfileScreen>
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 12),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                         ),
                       ),
@@ -355,10 +358,7 @@ class _CookProfileScreenState extends State<CookProfileScreen>
 
                   // Stats row
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 16,
-                      horizontal: 12,
-                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
@@ -374,26 +374,19 @@ class _CookProfileScreenState extends State<CookProfileScreen>
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         _StatItem(
-                          value:
-                              cook?.avgRating.toStringAsFixed(1) ?? '0.0',
+                          value: cook?.avgRating.toStringAsFixed(1) ?? '0.0',
                           label: 'Rating',
                           icon: Icons.star,
                           iconColor: AppTheme.primaryOrange,
                         ),
-                        Container(
-                            width: 1,
-                            height: 40,
-                            color: AppTheme.lightGrey),
+                        Container(width: 1, height: 40, color: AppTheme.lightGrey),
                         _StatItem(
                           value: '${cook?.followersCount ?? 0}',
                           label: 'Followers',
                           icon: Icons.people_outline,
                           iconColor: AppTheme.greyText,
                         ),
-                        Container(
-                            width: 1,
-                            height: 40,
-                            color: AppTheme.lightGrey),
+                        Container(width: 1, height: 40, color: AppTheme.lightGrey),
                         _StatItem(
                           value: '${_cookMeals.length}',
                           label: 'Meals',
@@ -401,13 +394,9 @@ class _CookProfileScreenState extends State<CookProfileScreen>
                           iconColor: AppTheme.greyText,
                         ),
                         if (cook != null && cook.deliveryEnabled) ...[
-                          Container(
-                              width: 1,
-                              height: 40,
-                              color: AppTheme.lightGrey),
+                          Container(width: 1, height: 40, color: AppTheme.lightGrey),
                           _StatItem(
-                            value:
-                                '${cook.deliveryRadiusKm.toStringAsFixed(0)} km',
+                            value: '${cook.deliveryRadiusKm.toStringAsFixed(0)} km',
                             label: 'Delivery',
                             icon: Icons.delivery_dining,
                             iconColor: AppTheme.successGreen,
@@ -416,117 +405,120 @@ class _CookProfileScreenState extends State<CookProfileScreen>
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
-                  // Bio
+                  // ── About section ──────────────────────────────────────
                   if (cook != null && cook.bio.isNotEmpty) ...[
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        cook.bio,
+                    const Text(
+                      'About',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.darkText,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      cook.bio,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        height: 1.6,
+                        color: AppTheme.greyText,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+
+                  // ── Reviews section ────────────────────────────────────
+                  if (_reviews.isNotEmpty) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Reviews (${_reviews.length})',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.darkText,
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            const Icon(Icons.star,
+                                size: 16, color: AppTheme.primaryOrange),
+                            const SizedBox(width: 4),
+                            Text(
+                              cook?.avgRating.toStringAsFixed(1) ?? '0.0',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.darkText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ..._reviews.map((r) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _ReviewCard(review: r),
+                        )),
+                    const SizedBox(height: 24),
+                  ],
+
+                  // ── Meals section ──────────────────────────────────────
+                  Row(
+                    children: [
+                      const Text(
+                        'Meals',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.darkText,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '(${_cookMeals.length})',
                         style: const TextStyle(
                           fontSize: 14,
-                          height: 1.6,
                           color: AppTheme.greyText,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-
-                  const SizedBox(height: 8),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                 ],
               ),
             ),
           ),
 
-          // Tab bar
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _SliverTabBarDelegate(
-              TabBar(
-                controller: _tabController,
-                labelColor: AppTheme.primaryOrange,
-                unselectedLabelColor: AppTheme.greyText,
-                indicatorColor: AppTheme.primaryOrange,
-                indicatorWeight: 3,
-                labelStyle: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+          // Meals list
+          _cookMeals.isEmpty
+              ? SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 32),
+                    child: Center(
+                      child: Text(
+                        'No meals listed yet',
+                        style: TextStyle(color: AppTheme.greyText),
+                      ),
+                    ),
+                  ),
+                )
+              : SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _CookMealCard(meal: _cookMeals[index]),
+                    childCount: _cookMeals.length,
+                  ),
                 ),
-                tabs: [
-                  Tab(text: 'Meals (${_cookMeals.length})'),
-                  Tab(text: 'Reviews (${_reviews.length})'),
-                ],
-              ),
-            ),
-          ),
-        ],
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            // Meals tab
-            _cookMeals.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No meals listed yet',
-                      style: TextStyle(color: AppTheme.greyText),
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.only(top: 12),
-                    itemCount: _cookMeals.length,
-                    itemBuilder: (context, index) {
-                      return _CookMealCard(meal: _cookMeals[index]);
-                    },
-                  ),
 
-            // Reviews tab
-            _reviews.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No reviews yet',
-                      style: TextStyle(color: AppTheme.greyText),
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.only(top: 12),
-                    itemCount: _reviews.length,
-                    itemBuilder: (context, index) {
-                      return _ReviewCard(review: _reviews[index]);
-                    },
-                  ),
-          ],
-        ),
+          const SliverToBoxAdapter(child: SizedBox(height: 32)),
+        ],
       ),
     );
   }
-}
-
-// ─── Sliver Tab Bar Delegate ────────────────────────────────────────────────
-
-class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
-  final TabBar _tabBar;
-
-  _SliverTabBarDelegate(this._tabBar);
-
-  @override
-  double get minExtent => _tabBar.preferredSize.height;
-
-  @override
-  double get maxExtent => _tabBar.preferredSize.height;
-
-  @override
-  Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: AppTheme.warmCream,
-      child: _tabBar,
-    );
-  }
-
-  @override
-  bool shouldRebuild(_SliverTabBarDelegate oldDelegate) => false;
 }
 
 // ─── Stat Item ──────────────────────────────────────────────────────────────

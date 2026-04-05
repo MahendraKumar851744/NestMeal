@@ -123,10 +123,18 @@ class OrderProvider extends ChangeNotifier {
         'cook_id': cookId,
         'fulfillment_type': fulfillmentType,
         'items': items.map((item) {
-          return {
+          final Map<String, dynamic> itemMap = {
             'meal_id': item['mealId'],
             'quantity': item['quantity'],
           };
+          final extras = item['extras'] as List<Map<String, dynamic>>?;
+          if (extras != null && extras.isNotEmpty) {
+            itemMap['extras'] = extras.map((e) => {
+              'extra_id': e['extraId'],
+              'quantity': e['quantity'],
+            }).toList();
+          }
+          return itemMap;
         }).toList(),
       };
 

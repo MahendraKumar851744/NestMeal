@@ -901,9 +901,10 @@
 // }
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import 'package:nestmeal_app/config/theme.dart';
 import 'package:nestmeal_app/providers/auth_provider.dart';
@@ -1328,6 +1329,55 @@ class _CookProfileEditScreenState extends State<CookProfileEditScreen> {
   }
 
   // UI Components
+  Future<void> _pickAndUploadProfileImage() async {
+    final picker = ImagePicker();
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Camera'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Gallery'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    final picked = await picker.pickImage(source: source, maxWidth: 800, maxHeight: 800, imageQuality: 85);
+    if (picked == null || !mounted) return;
+
+    final cookId = context.read<AuthProvider>().currentUser?.cookProfile?.id;
+    if (cookId == null) return;
+
+    final bytes = await picked.readAsBytes();
+    final filename = picked.name.isNotEmpty ? picked.name : 'profile.jpg';
+    if (!mounted) return;
+
+    try {
+      await context.read<AuthProvider>().uploadCookProfileImage(cookId, bytes, filename);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile photo updated'), backgroundColor: AppTheme.successGreen),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upload failed: $e'), backgroundColor: AppTheme.errorRed),
+        );
+      }
+    }
+  }
+
   Widget _buildProfileHeader(UserModel? user, CookProfile? cook) {
     final initials = (user?.fullName ?? 'C')
         .split(' ')
@@ -1351,18 +1401,39 @@ class _CookProfileEditScreenState extends State<CookProfileEditScreen> {
       _ => cook?.status ?? 'Unknown',
     };
 
+    final imageUrl = cook?.profileImageUrl;
+
     return Column(
       children: [
-        CircleAvatar(
-          radius: 48,
-          backgroundColor: AppTheme.primaryOrange.withValues(alpha: 0.1),
-          child: Text(
-            initials,
-            style: const TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.primaryOrange,
-            ),
+        GestureDetector(
+          onTap: _pickAndUploadProfileImage,
+          child: Stack(
+            alignment: Alignment.bottomRight,
+            children: [
+              CircleAvatar(
+                radius: 48,
+                backgroundColor: AppTheme.primaryOrange.withValues(alpha: 0.1),
+                backgroundImage: imageUrl != null ? CachedNetworkImageProvider(imageUrl) : null,
+                child: imageUrl == null
+                    ? Text(
+                        initials,
+                        style: const TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryOrange,
+                        ),
+                      )
+                    : null,
+              ),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: const BoxDecoration(
+                  color: AppTheme.primaryOrange,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 12),

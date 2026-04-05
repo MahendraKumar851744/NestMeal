@@ -1,3 +1,4 @@
+import '../config/api_config.dart';
 import 'helpers.dart';
 
 class MealExtra {
@@ -94,6 +95,7 @@ class CookCard {
   final double deliveryRadiusKm;
   final bool isActive;
   final String status;
+  final String? profileImageUrl;
 
   CookCard({
     required this.id,
@@ -109,6 +111,7 @@ class CookCard {
     required this.deliveryRadiusKm,
     required this.isActive,
     required this.status,
+    this.profileImageUrl,
   });
 
   factory CookCard.fromJson(Map<String, dynamic> json) {
@@ -126,6 +129,7 @@ class CookCard {
       deliveryRadiusKm: toSafeDouble(json['delivery_radius_km']),
       isActive: json['is_active'] ?? false,
       status: json['status'] ?? '',
+      profileImageUrl: ApiConfig.absoluteUrl(json['profile_image_url']),
     );
   }
 

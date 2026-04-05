@@ -176,6 +176,9 @@ class _CartScreenState extends State<CartScreen> {
           .map((item) => {
                 'mealId': item.mealId,
                 'quantity': item.quantity,
+                'extras': item.extras
+                    .map((e) => {'extraId': e.id, 'quantity': e.quantity})
+                    .toList(),
               })
           .toList();
 
@@ -827,6 +830,8 @@ class _CartScreenState extends State<CartScreen> {
                     onDecrement: () => cart.updateQuantity(
                         item.mealId, item.quantity - 1),
                     onRemove: () => cart.removeItem(item.mealId),
+                    onExtraQtyChanged: (extraId, qty) =>
+                        cart.updateExtraQuantity(item.mealId, extraId, qty),
                   )),
 
               const SizedBox(height: 24),
@@ -1196,12 +1201,14 @@ class _CartItemCard extends StatelessWidget {
   final VoidCallback onIncrement;
   final VoidCallback onDecrement;
   final VoidCallback onRemove;
+  final void Function(String extraId, int qty) onExtraQtyChanged;
 
   const _CartItemCard({
     required this.item,
     required this.onIncrement,
     required this.onDecrement,
     required this.onRemove,
+    required this.onExtraQtyChanged,
   });
 
   @override
@@ -1220,128 +1227,222 @@ class _CartItemCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: item.imageUrl != null
-                ? CachedNetworkImage(
-                    imageUrl: item.imageUrl!,
-                    height: 70,
-                    width: 70,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(
-                      height: 70,
-                      width: 70,
-                      color: AppTheme.lightGrey.withValues(alpha: 0.5),
-                    ),
-                    errorWidget: (_, __, ___) => Container(
-                      height: 70,
-                      width: 70,
-                      color: AppTheme.lightGrey.withValues(alpha: 0.5),
-                      child: const Icon(Icons.restaurant,
-                          color: AppTheme.greyText),
-                    ),
-                  )
-                : Container(
-                    height: 70,
-                    width: 70,
-                    decoration: BoxDecoration(
-                      color: AppTheme.lightGrey.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child:
-                        const Icon(Icons.restaurant, color: AppTheme.greyText),
-                  ),
-          ),
-          const SizedBox(width: 12),
-
-          // Title, cook, price
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'by ${item.cookDisplayName}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.greyText,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '\$${(item.price * item.quantity).toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.primaryOrange,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Quantity controls
-          Column(
+          Row(
             children: [
-              IconButton(
-                onPressed: onRemove,
-                icon: const Icon(Icons.delete_outline,
-                    size: 18, color: AppTheme.errorRed),
-                constraints: const BoxConstraints(
-                  minHeight: 28,
-                  minWidth: 28,
-                ),
-                padding: EdgeInsets.zero,
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: AppTheme.lightGrey),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    InkWell(
-                      onTap: onDecrement,
-                      child: const Padding(
-                        padding: EdgeInsets.all(6),
-                        child: Icon(Icons.remove, size: 16),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Text(
-                        '${item.quantity}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
+              // Image
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: item.imageUrl != null
+                    ? CachedNetworkImage(
+                        imageUrl: item.imageUrl!,
+                        height: 70,
+                        width: 70,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => Container(
+                          height: 70,
+                          width: 70,
+                          color: AppTheme.lightGrey.withValues(alpha: 0.5),
                         ),
+                        errorWidget: (_, __, ___) => Container(
+                          height: 70,
+                          width: 70,
+                          color: AppTheme.lightGrey.withValues(alpha: 0.5),
+                          child: const Icon(Icons.restaurant,
+                              color: AppTheme.greyText),
+                        ),
+                      )
+                    : Container(
+                        height: 70,
+                        width: 70,
+                        decoration: BoxDecoration(
+                          color: AppTheme.lightGrey.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.restaurant,
+                            color: AppTheme.greyText),
+                      ),
+              ),
+              const SizedBox(width: 12),
+
+              // Title, cook, price
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    InkWell(
-                      onTap: onIncrement,
-                      child: const Padding(
-                        padding: EdgeInsets.all(6),
-                        child: Icon(Icons.add, size: 16),
+                    const SizedBox(height: 2),
+                    Text(
+                      'by ${item.cookDisplayName}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.greyText,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '\$${item.lineTotal.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.primaryOrange,
                       ),
                     ),
                   ],
                 ),
               ),
+
+              // Quantity controls
+              Column(
+                children: [
+                  IconButton(
+                    onPressed: onRemove,
+                    icon: const Icon(Icons.delete_outline,
+                        size: 18, color: AppTheme.errorRed),
+                    constraints:
+                        const BoxConstraints(minHeight: 28, minWidth: 28),
+                    padding: EdgeInsets.zero,
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppTheme.lightGrey),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        InkWell(
+                          onTap: onDecrement,
+                          child: const Padding(
+                            padding: EdgeInsets.all(6),
+                            child: Icon(Icons.remove, size: 16),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          child: Text(
+                            '${item.quantity}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        InkWell(
+                          onTap: onIncrement,
+                          child: const Padding(
+                            padding: EdgeInsets.all(6),
+                            child: Icon(Icons.add, size: 16),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
+
+          // ── Add-ons ──────────────────────────────────────────────────
+          if (item.extras.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            const Divider(height: 1, color: Color(0xFFF0F0F0)),
+            const SizedBox(height: 8),
+            ...item.extras.map((extra) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              extra.name,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: AppTheme.darkText,
+                              ),
+                            ),
+                            Text(
+                              '+\$${extra.price.toStringAsFixed(2)} each',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppTheme.greyText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Extra quantity stepper
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                              color: AppTheme.primaryOrange.withValues(alpha: 0.4)),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            InkWell(
+                              onTap: () => onExtraQtyChanged(
+                                  extra.id, extra.quantity - 1),
+                              child: const Padding(
+                                padding: EdgeInsets.all(4),
+                                child: Icon(Icons.remove,
+                                    size: 14, color: AppTheme.primaryOrange),
+                              ),
+                            ),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8),
+                              child: Text(
+                                '${extra.quantity}',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.darkText,
+                                ),
+                              ),
+                            ),
+                            InkWell(
+                              onTap: () => onExtraQtyChanged(
+                                  extra.id, extra.quantity + 1),
+                              child: const Padding(
+                                padding: EdgeInsets.all(4),
+                                child: Icon(Icons.add,
+                                    size: 14, color: AppTheme.primaryOrange),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 56,
+                        child: Text(
+                          '\$${extra.subtotal.toStringAsFixed(2)}',
+                          textAlign: TextAlign.end,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.darkText,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+          ],
         ],
       ),
     );

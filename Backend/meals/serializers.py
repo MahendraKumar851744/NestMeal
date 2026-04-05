@@ -71,6 +71,15 @@ class CookProfileCardSerializer(serializers.Serializer):
     delivery_radius_km = serializers.DecimalField(max_digits=5, decimal_places=2)
     is_active = serializers.BooleanField()
     status = serializers.CharField()
+    profile_image_url = serializers.SerializerMethodField()
+
+    def get_profile_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.profile_image and request:
+            return request.build_absolute_uri(obj.profile_image.url)
+        elif obj.profile_image:
+            return obj.profile_image.url
+        return None
 
 
 # ---------------------------------------------------------------------------

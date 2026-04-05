@@ -492,16 +492,21 @@ class _StoryBar extends StatelessWidget {
                             radius: 30,
                             backgroundColor:
                                 AppTheme.primaryOrange.withValues(alpha: 0.12),
-                            child: Text(
-                              group.cookDisplayName.isNotEmpty
-                                  ? group.cookDisplayName[0].toUpperCase()
-                                  : 'C',
-                              style: GoogleFonts.playfairDisplay(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                                color: AppTheme.primaryOrange,
-                              ),
-                            ),
+                            backgroundImage: group.cookProfileImageUrl != null
+                                ? CachedNetworkImageProvider(group.cookProfileImageUrl!)
+                                : null,
+                            child: group.cookProfileImageUrl == null
+                                ? Text(
+                                    group.cookDisplayName.isNotEmpty
+                                        ? group.cookDisplayName[0].toUpperCase()
+                                        : 'C',
+                                    style: GoogleFonts.playfairDisplay(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppTheme.primaryOrange,
+                                    ),
+                                  )
+                                : null,
                           ),
                         ),
                       ),

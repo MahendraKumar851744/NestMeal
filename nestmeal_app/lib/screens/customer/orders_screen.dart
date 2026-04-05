@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -268,14 +269,19 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   CircleAvatar(
                     radius: 22,
                     backgroundColor: const Color(0xFFF97316).withOpacity(0.12),
-                    child: Text(
-                      firstLetter,
-                      style: const TextStyle(
-                        color: Color(0xFFF97316),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 18,
-                      ),
-                    ),
+                    backgroundImage: item.cookProfileImageUrl != null
+                        ? CachedNetworkImageProvider(item.cookProfileImageUrl!)
+                        : null,
+                    child: item.cookProfileImageUrl == null
+                        ? Text(
+                            firstLetter,
+                            style: const TextStyle(
+                              color: Color(0xFFF97316),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                            ),
+                          )
+                        : null,
                   ),
                   const SizedBox(width: 12),
                   Expanded(

@@ -1,6 +1,8 @@
+import 'dart:typed_data';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
@@ -36,6 +38,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   double? _kitchenLatitude;
   double? _kitchenLongitude;
+  XFile? _cookProfileImage;
+  Uint8List? _cookProfileImageBytes;
 
   String _selectedRole = 'customer';
   bool _obscurePassword = true;
@@ -96,6 +100,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
         kitchenLongitude:
             _selectedRole == 'cook' ? _kitchenLongitude : null,
       );
+
+      // Upload profile image if a cook selected one
+      if (_selectedRole == 'cook' && _cookProfileImage != null && mounted) {
+        final cookId = authProvider.currentUser?.cookProfile?.id;
+        if (cookId != null) {
+          try {
+            final bytes = _cookProfileImageBytes ?? await _cookProfileImage!.readAsBytes();
+            final filename = _cookProfileImage!.name.isNotEmpty ? _cookProfileImage!.name : 'profile.jpg';
+            await authProvider.uploadCookProfileImage(cookId, bytes, filename);
+          } catch (_) {
+            // Non-fatal — cook can upload later from profile edit
+          }
+        }
+      }
 
       if (!mounted) return;
 
@@ -385,7 +403,71 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       color: AppTheme.darkText,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
+
+                  // Cook profile image (optional)
+                  Center(
+                    child: GestureDetector(
+                      onTap: () async {
+                        final source = await showModalBottomSheet<ImageSource>(
+                          context: context,
+                          builder: (ctx) => SafeArea(
+                            child: Wrap(children: [
+                              ListTile(
+                                leading: const Icon(Icons.camera_alt),
+                                title: const Text('Camera'),
+                                onTap: () => Navigator.pop(ctx, ImageSource.camera),
+                              ),
+                              ListTile(
+                                leading: const Icon(Icons.photo_library),
+                                title: const Text('Gallery'),
+                                onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+                              ),
+                            ]),
+                          ),
+                        );
+                        if (source == null) return;
+                        final picked = await ImagePicker().pickImage(
+                          source: source, maxWidth: 800, maxHeight: 800, imageQuality: 85,
+                        );
+                        if (picked != null && mounted) {
+                          final bytes = await picked.readAsBytes();
+                          setState(() {
+                            _cookProfileImage = picked;
+                            _cookProfileImageBytes = bytes;
+                          });
+                        }
+                      },
+                      child: Stack(
+                        alignment: Alignment.bottomRight,
+                        children: [
+                          CircleAvatar(
+                            radius: 48,
+                            backgroundColor: AppTheme.primaryOrange.withValues(alpha: 0.1),
+                            backgroundImage: _cookProfileImageBytes != null
+                                ? MemoryImage(_cookProfileImageBytes!)
+                                : null,
+                            child: _cookProfileImageBytes == null
+                                ? const Icon(Icons.person_outline, size: 40, color: AppTheme.primaryOrange)
+                                : null,
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(
+                              color: AppTheme.primaryOrange,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Center(
+                    child: Text('Profile Photo (optional)', style: TextStyle(fontSize: 12, color: AppTheme.greyText)),
+                  ),
+                  const SizedBox(height: 16),
 
                   TextFormField(
                     controller: _kitchenNameController,

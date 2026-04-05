@@ -134,6 +134,8 @@ class CookProfile(models.Model):
     delivery_fee_value = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
     delivery_min_order = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
 
+    profile_image = models.ImageField(upload_to='cook_profiles/', blank=True, null=True)
+
     food_safety_certificate_url = models.URLField(blank=True, null=True)
     government_id = models.CharField(max_length=100, blank=True)
 

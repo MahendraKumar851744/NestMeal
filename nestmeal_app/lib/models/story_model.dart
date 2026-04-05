@@ -1,7 +1,10 @@
+import '../config/api_config.dart';
+
 class StoryModel {
   final String id;
   final String cookId;
   final String cookDisplayName;
+  final String? cookProfileImageUrl;
   final String imageUrl;
   final String caption;
   final String createdAt;
@@ -14,6 +17,7 @@ class StoryModel {
     required this.id,
     required this.cookId,
     required this.cookDisplayName,
+    this.cookProfileImageUrl,
     required this.imageUrl,
     this.caption = '',
     required this.createdAt,
@@ -36,6 +40,7 @@ class StoryModel {
       id: json['id'].toString(),
       cookId: json['cook_id'].toString(),
       cookDisplayName: json['cook_display_name'] ?? '',
+      cookProfileImageUrl: ApiConfig.absoluteUrl(json['cook_profile_image_url']),
       imageUrl: json['image_url'] ?? '',
       caption: json['caption'] ?? '',
       createdAt: json['created_at'] ?? '',
@@ -50,6 +55,7 @@ class StoryModel {
         id: id,
         cookId: cookId,
         cookDisplayName: cookDisplayName,
+        cookProfileImageUrl: cookProfileImageUrl,
         imageUrl: imageUrl,
         caption: caption,
         createdAt: createdAt,
@@ -63,11 +69,13 @@ class StoryModel {
 class CookStoryGroup {
   final String cookId;
   final String cookDisplayName;
+  final String? cookProfileImageUrl;
   final List<StoryModel> stories;
 
   CookStoryGroup({
     required this.cookId,
     required this.cookDisplayName,
+    this.cookProfileImageUrl,
     required this.stories,
   });
 
@@ -77,6 +85,7 @@ class CookStoryGroup {
     return CookStoryGroup(
       cookId: stories.first.cookId,
       cookDisplayName: stories.first.cookDisplayName,
+      cookProfileImageUrl: stories.first.cookProfileImageUrl,
       stories: stories,
     );
   }

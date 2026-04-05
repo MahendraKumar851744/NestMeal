@@ -47,7 +47,9 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
 
   void _markCurrentViewed() {
     final story = widget.storyGroups[_currentGroupIndex].stories[_currentStoryIndex];
-    context.read<StoryProvider>().markStoryViewed(story.id);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<StoryProvider>().markStoryViewed(story.id);
+    });
   }
 
   void _startTimer() {
@@ -228,16 +230,21 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                         radius: 18,
                         backgroundColor:
                             AppTheme.primaryOrange.withValues(alpha: 0.3),
-                        child: Text(
-                          group.cookDisplayName.isNotEmpty
-                              ? group.cookDisplayName[0].toUpperCase()
-                              : 'C',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 16,
-                          ),
-                        ),
+                        backgroundImage: group.cookProfileImageUrl != null
+                            ? CachedNetworkImageProvider(group.cookProfileImageUrl!)
+                            : null,
+                        child: group.cookProfileImageUrl == null
+                            ? Text(
+                                group.cookDisplayName.isNotEmpty
+                                    ? group.cookDisplayName[0].toUpperCase()
+                                    : 'C',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                ),
+                              )
+                            : null,
                       ),
                       const SizedBox(width: 10),
                       Expanded(

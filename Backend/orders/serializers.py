@@ -6,7 +6,7 @@ from rest_framework import serializers
 from accounts.models import CookProfile
 from coupons.models import Coupon, CouponUsage
 from delivery.models import DeliverySlot
-from meals.models import Meal, PickupSlot
+from meals.models import Meal, MealExtra, PickupSlot
 from orders.models import Order, OrderItem, OrderMessage
 
 
@@ -44,7 +44,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
         model = OrderItem
         fields = [
             'id', 'meal', 'meal_title', 'quantity',
-            'unit_price', 'line_total',
+            'unit_price', 'line_total', 'extras',
         ]
         read_only_fields = fields
 
@@ -53,12 +53,23 @@ class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     customer_name = serializers.CharField(source='customer.full_name', read_only=True)
     cook_display_name = serializers.CharField(source='cook.display_name', read_only=True)
+    cook_profile_image_url = serializers.SerializerMethodField()
+
+    def get_cook_profile_image_url(self, obj):
+        request = self.context.get('request')
+        try:
+            profile_image = obj.cook.profile_image
+            if profile_image and request:
+                return request.build_absolute_uri(profile_image.url)
+            return profile_image.url if profile_image else None
+        except Exception:
+            return None
 
     class Meta:
         model = Order
         fields = [
             'id', 'order_number', 'customer', 'customer_name',
-            'cook', 'cook_display_name', 'fulfillment_type',
+            'cook', 'cook_display_name', 'cook_profile_image_url', 'fulfillment_type',
             # Pickup
             'pickup_slot', 'pickup_code', 'pickup_time_actual',
             # Delivery
@@ -86,13 +97,24 @@ class OrderSerializer(serializers.ModelSerializer):
 
 class OrderListSerializer(serializers.ModelSerializer):
     cook_display_name = serializers.CharField(source='cook.display_name', read_only=True)
+    cook_profile_image_url = serializers.SerializerMethodField()
+
+    def get_cook_profile_image_url(self, obj):
+        request = self.context.get('request')
+        try:
+            profile_image = obj.cook.profile_image
+            if profile_image and request:
+                return request.build_absolute_uri(profile_image.url)
+            return profile_image.url if profile_image else None
+        except Exception:
+            return None
 
     class Meta:
         model = Order
         fields = [
             'id', 'order_number', 'status', 'total_amount',
             'fulfillment_type', 'created_at', 'cook_display_name',
-            'pickup_code', 'acceptance_deadline',
+            'cook_profile_image_url', 'pickup_code', 'acceptance_deadline',
         ]
         read_only_fields = fields
 
@@ -101,9 +123,15 @@ class OrderListSerializer(serializers.ModelSerializer):
 # Create serializers
 # ---------------------------------------------------------------------------
 
+class OrderItemExtraCreateSerializer(serializers.Serializer):
+    extra_id = serializers.UUIDField()
+    quantity = serializers.IntegerField(min_value=1, max_value=20)
+
+
 class OrderItemCreateSerializer(serializers.Serializer):
     meal_id = serializers.UUIDField()
     quantity = serializers.IntegerField(min_value=1)
+    extras = OrderItemExtraCreateSerializer(many=True, required=False, default=list)
 
 
 class OrderCreateSerializer(serializers.Serializer):
@@ -233,7 +261,31 @@ class OrderCreateSerializer(serializers.Serializer):
         order_items_to_create = []
         for item in items_data:
             meal = meals_map[str(item['meal_id'])]
-            unit_price = meal.effective_price
+            base_price = meal.effective_price
+
+            # Process extras
+            extras_data = item.get('extras', [])
+            extras_snapshot = []
+            extras_total = Decimal('0.00')
+            if extras_data:
+                extra_ids = [str(e['extra_id']) for e in extras_data]
+                meal_extras = MealExtra.objects.filter(
+                    id__in=extra_ids, meal=meal, is_available=True
+                )
+                meal_extras_map = {str(e.id): e for e in meal_extras}
+                for extra_item in extras_data:
+                    extra = meal_extras_map.get(str(extra_item['extra_id']))
+                    if extra:
+                        qty = extra_item['quantity']
+                        extras_total += extra.price * qty
+                        extras_snapshot.append({
+                            'id': str(extra.id),
+                            'name': extra.name,
+                            'price': str(extra.price),
+                            'quantity': qty,
+                        })
+
+            unit_price = base_price + extras_total
             line_total = unit_price * item['quantity']
             item_total += line_total
             order_items_to_create.append({
@@ -242,6 +294,7 @@ class OrderCreateSerializer(serializers.Serializer):
                 'quantity': item['quantity'],
                 'unit_price': unit_price,
                 'line_total': line_total,
+                'extras': extras_snapshot,
             })
 
         # ---- Pricing ----
